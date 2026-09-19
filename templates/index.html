@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareerPilot AI - AI Resume & Interview Coach</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <span class="brand-icon">🚀</span>
+                <span class="brand-name">CareerPilot <span class="accent">AI</span></span>
+            </div>
+            <div class="nav-badges">
+                <a href="#interviewCoachSection" class="nav-quick-link">🎯 Interview Coach</a>
+                <a href="#careerIntelligenceSection" class="nav-quick-link nav-intel-link">📈 Career Intelligence</a>
+                <a href="#careerHistorySection" class="nav-quick-link nav-history-link">📚 Career History</a>
+                <span class="tag tag-step">Step 6 &bull; SQLite History</span>
+                <span class="tag tag-hackathon">🎓 College Project</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-badge">AI Career Acceleration Platform</div>
+            <h1>AI Resume & Interview Coach</h1>
+            <p class="subtitle">Extract resume content, uncover in-depth skill analysis, practice role-specific technical interviews, and unlock complete career intelligence with tailored learning roadmaps.</p>
+        </section>
+
+        <!-- Flash Notifications -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="notifications">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span class="alert-icon">
+                                {% if category == 'success' %}✓{% elif category == 'error' %}✕{% else %}ℹ{% endif %}
+                            </span>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Top Two-Column Workflow: Upload & Extracted Content -->
+        <div class="grid-layout">
+            <!-- 1. Upload Panel -->
+            <section class="card upload-card">
+                <div class="card-header">
+                    <h2>1. Upload Resume</h2>
+                    <p>Select your resume in PDF format to extract its content.</p>
+                </div>
+
+                <form method="POST" action="/" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+                    <div class="dropzone" id="dropzone">
+                        <div class="dropzone-content">
+                            <div class="upload-icon">📄</div>
+                            <p class="dropzone-title"><strong>Click to browse</strong> or drag & drop</p>
+                            <p class="dropzone-hint">Supports PDF files up to 16MB</p>
+                            <span id="selectedFileName" class="selected-file-badge" style="display: none;"></span>
+                        </div>
+                        <input type="file" name="resume" id="fileInput" accept=".pdf" required>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="extractBtn">
+                        <span>Extract Resume Text</span> &rarr;
+                    </button>
+                </form>
+
+                <div class="file-tips">
+                    <h4>💡 Tips for best results</h4>
+                    <ul>
+                        <li>Use standard PDF text documents rather than scanned photo PDFs.</li>
+                        <li>Ensure sections like Experience, Education, and Skills exist.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 2. Extracted Text & Trigger Panel -->
+            <section class="card preview-card">
+                <div class="card-header">
+                    <div class="header-row">
+                        <div>
+                            <h2>2. Extracted Resume Content</h2>
+                            <p>Parsed plain text from your PDF document.</p>
+                        </div>
+                        {% if stats %}
+                            <div class="stats-group">
+                                <span class="stat-pill"><strong>{{ stats.word_count }}</strong> words</span>
+                                <span class="stat-pill"><strong>{{ stats.char_count }}</strong> chars</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if extracted_text %}
+                    <div class="file-meta">
+                        <span>File: <strong>{{ filename or 'Uploaded Resume' }}</strong></span>
+                        <button type="button" class="btn-copy" onclick="copyExtractedText()" id="copyBtn">📋 Copy Text</button>
+                    </div>
+
+                    <div class="text-preview-wrapper">
+                        <pre id="extractedTextContent">{{ extracted_text }}</pre>
+                    </div>
+
+                    <!-- AI Trigger Action Box -->
+                    <div class="analyze-action-card">
+                        <div class="action-info">
+                            <h4>⚡ Ready for AI Analysis</h4>
+                            <p>Identify candidate profile, technical & soft skills, strengths, missing skills, and matching roles.</p>
+                        </div>
+
+                        <form method="POST" action="/analyze" id="analyzeForm">
+                            <input type="hidden" name="resume_text" id="resumeTextInput" value="{{ extracted_text }}">
+                            <input type="hidden" name="filename" value="{{ filename }}">
+                            <button type="submit" class="btn-analyze" id="analyzeBtn" onclick="handleAnalyzeClick(event)">
+                                <span class="btn-sparkle">✨</span>
+                                <span>Analyze Resume with AI</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Loading Indicator Box (hidden by default) -->
+                    <div id="aiLoadingBox" class="loading-box" style="display: none;">
+                        <div class="spinner"></div>
+                        <div class="loading-text">
+                            <h4>AI is analyzing your resume...</h4>
+                            <p id="loadingStatus">Extracting skills, evaluating experience, and mapping career paths...</p>
+                        </div>
+                    </div>
+
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-icon">📥</div>
+                        <h3>No resume uploaded yet</h3>
+                        <p>Upload your PDF resume on the left to view parsed text, unlock AI analysis, or jump directly to the Interview Coach and Career Dashboard below!</p>
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- 3. AI Analysis Dashboard Section -->
+        <section id="analysisDashboardSection" class="dashboard-section" {% if not analysis %}style="display: none;"{% endif %}>
+            <div class="section-title-row">
+                <div>
+                    <span class="badge-tag">Step 2 Completed</span>
+                    <h2>AI Resume Intelligence Dashboard</h2>
+                    <p class="section-subtitle">Comprehensive breakdown of candidate profile, skills, strengths, and market alignment.</p>
+                </div>
+                <div class="source-status" id="modelSourceStatus">
+                    {% if analysis %}
+                        {% if analysis.source == 'live_gemini' %}
+                            <span class="source-badge source-live">🟢 Powered by Google Gemini 2.0</span>
+                        {% else %}
+                            <span class="source-badge source-demo">⚡ Smart Heuristic Analyzer (Hackathon Demo Mode)</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if analysis and analysis.notice %}
+                <div class="notice-banner" id="analysisNoticeBanner">
+                    <span class="notice-icon">💡</span>
+                    <span>{{ analysis.notice }}</span>
+                </div>
+            {% else %}
+                <div class="notice-banner" id="analysisNoticeBanner" style="display: none;">
+                    <span class="notice-icon">💡</span>
+                    <span id="noticeBannerText"></span>
+                </div>
+            {% endif %}
+
+            <!-- Candidate Profile Overview Card -->
+            <div class="card profile-overview-card">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar">👤</div>
+                    <div class="profile-details">
+                        <h3 id="candidateName">{{ analysis.candidate_name if analysis else 'Candidate Name' }}</h3>
+                        <p class="profile-summary" id="candidateSummary">
+                            {{ analysis.summary if analysis else 'Executive profile summary generated by AI analysis.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="profile-metrics">
+                    <div class="metric-box">
+                        <span class="metric-val" id="metricTechCount">{{ (analysis.technical_skills | length) if analysis else '0' }}</span>
+                        <span class="metric-lbl">Technical Skills</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="metric-val" id="metricRolesCount">{{ (analysis.suggested_roles | length) if analysis else '0' }}</span>
+                        <span class="metric-lbl">Matched Roles</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="metric-val" id="metricStrengthsCount">{{ (analysis.strengths | length) if analysis else '0' }}</span>
+                        <span class="metric-lbl">Key Strengths</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="metric-val" id="metricMissingCount">{{ (analysis.missing_skills | length) if analysis else '0' }}</span>
+                        <span class="metric-lbl">Skill Gaps to Fill</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Matrix (3 Columns) -->
+            <div class="skills-grid">
+                <!-- Technical Skills -->
+                <div class="card skill-card">
+                    <div class="skill-card-header">
+                        <span class="skill-icon icon-tech">💻</span>
+                        <h4>Technical Skills</h4>
+                    </div>
+                    <p class="skill-card-sub">Programming languages, tools & frameworks</p>
+                    <div class="tags-container" id="technicalSkillsList">
+                        {% if analysis and analysis.technical_skills %}
+                            {% for skill in analysis.technical_skills %}
+                                <span class="tag-pill tag-tech">{{ skill }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="tag-pill tag-tech">Skills will appear here</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Soft Skills -->
+                <div class="card skill-card">
+                    <div class="skill-card-header">
+                        <span class="skill-icon icon-soft">🤝</span>
+                        <h4>Soft Skills</h4>
+                    </div>
+                    <p class="skill-card-sub">Interpersonal and teamwork capabilities</p>
+                    <div class="tags-container" id="softSkillsList">
+                        {% if analysis and analysis.soft_skills %}
+                            {% for skill in analysis.soft_skills %}
+                                <span class="tag-pill tag-soft">{{ skill }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="tag-pill tag-soft">Soft skills will appear here</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Missing / Recommended Skills -->
+                <div class="card skill-card skill-card-warning">
+                    <div class="skill-card-header">
+                        <span class="skill-icon icon-missing">📈</span>
+                        <h4>Missing / Recommended Skills</h4>
+                    </div>
+                    <p class="skill-card-sub">High-demand skills to elevate market value</p>
+                    <div class="tags-container" id="missingSkillsList">
+                        {% if analysis and analysis.missing_skills %}
+                            {% for skill in analysis.missing_skills %}
+                                <span class="tag-pill tag-missing">➕ {{ skill }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="tag-pill tag-missing">Recommendations will appear here</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggested Job Roles Section with 1-Click Launch to Interview Coach -->
+            <div class="card roles-card">
+                <div class="card-header">
+                    <div class="header-row">
+                        <div>
+                            <h2>🎯 Suggested Job Roles & Match Scores</h2>
+                            <p>Roles aligned with your skill stack. Click any role to practice in the <strong>Interview Coach</strong> or view in <strong>Career Intelligence</strong>!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="roles-grid" id="suggestedRolesList">
+                    {% if analysis and analysis.suggested_roles %}
+                        {% for role in analysis.suggested_roles %}
+                            <div class="role-item role-clickable" onclick="selectRoleForInterview('{{ role.title }}')">
+                                <div class="role-item-header">
+                                    <h4 class="role-title">{{ role.title }}</h4>
+                                    <span class="role-score-badge">{{ role.match_score }}</span>
+                                </div>
+                                <div class="score-bar-bg">
+                                    <div class="score-bar-fill" style="width: {{ role.match_score if '%' in role.match_score else '80%' }};"></div>
+                                </div>
+                                <p class="role-reason">{{ role.reason }}</p>
+                                <span class="role-cta">🎯 Practice this role in Interview Coach &rarr;</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="role-item">
+                            <h4>Target Job Roles</h4>
+                            <p>Analysis will identify role fits and match percentages.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Strengths & Resume Improvements Split Grid -->
+            <div class="insights-grid">
+                <!-- Strengths -->
+                <div class="card insights-card">
+                    <div class="card-header">
+                        <div class="header-icon-title">
+                            <span class="insight-icon icon-strength">💪</span>
+                            <div>
+                                <h3>Key Candidate Strengths</h3>
+                                <p>Highlights that stand out to technical interviewers</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="insight-list" id="strengthsList">
+                        {% if analysis and analysis.strengths %}
+                            {% for strength in analysis.strengths %}
+                                <li>
+                                    <span class="check-icon">✓</span>
+                                    <span>{{ strength }}</span>
+                                </li>
+                            {% endfor %}
+                        {% else %}
+                            <li>Key strengths will be identified here.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Resume Improvements -->
+                <div class="card insights-card">
+                    <div class="card-header">
+                        <div class="header-icon-title">
+                            <span class="insight-icon icon-improve">🎯</span>
+                            <div>
+                                <h3>Resume Improvement Suggestions</h3>
+                                <p>Actionable advice to increase interview call rates</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="insight-list improvement-list" id="improvementsList">
+                        {% if analysis and analysis.resume_improvements %}
+                            {% for tip in analysis.resume_improvements %}
+                                <li>
+                                    <span class="bullet-icon">⚡</span>
+                                    <span>{{ tip }}</span>
+                                </li>
+                            {% endfor %}
+                        {% else %}
+                            <li>Improvement suggestions will appear here.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Experience, Projects & Education Detail Tabs/Grid -->
+            <div class="details-grid">
+                <!-- Experience -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <h4>💼 Experience</h4>
+                    </div>
+                    <div id="experienceList" class="detail-items-container">
+                        {% if analysis and analysis.experience %}
+                            {% for exp in analysis.experience %}
+                                <div class="detail-item">
+                                    <div class="detail-item-title">{{ exp.role }}</div>
+                                    <div class="detail-item-sub">{{ exp.company }} &bull; {{ exp.duration }}</div>
+                                    <p class="detail-item-desc">{{ exp.description }}</p>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="empty-sub">No experience entries recorded.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Projects -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <h4>🛠️ Projects</h4>
+                    </div>
+                    <div id="projectsList" class="detail-items-container">
+                        {% if analysis and analysis.projects %}
+                            {% for proj in analysis.projects %}
+                                <div class="detail-item">
+                                    <div class="detail-item-title">{{ proj.title }}</div>
+                                    <div class="proj-tags">
+                                        {% for t in proj.technologies %}
+                                            <span class="proj-tag">{{ t }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    <p class="detail-item-desc">{{ proj.description }}</p>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="empty-sub">No projects recorded.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Education & Certifications -->
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <h4>🎓 Education & Certifications</h4>
+                    </div>
+                    <div id="educationList" class="detail-items-container">
+                        {% if analysis and analysis.education %}
+                            {% for edu in analysis.education %}
+                                <div class="detail-item">
+                                    <div class="detail-item-title">{{ edu.degree }}</div>
+                                    <div class="detail-item-sub">{{ edu.institution }} &bull; {{ edu.year }}</div>
+                                    {% if edu.details %}
+                                        <p class="detail-item-desc">{{ edu.details }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="cert-box">
+                        <h5>📜 Certifications</h5>
+                        <div id="certificationsList" class="cert-tags">
+                            {% if analysis and analysis.certifications %}
+                                {% for cert in analysis.certifications %}
+                                    <span class="cert-pill">{{ cert }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="cert-pill empty-cert">None recorded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- 4. STEP 3: AI INTERVIEW COACH SECTION                    -->
+        <!-- ======================================================== -->
+        <section id="interviewCoachSection" class="interview-coach-section">
+            <div class="section-title-row">
+                <div>
+                    <span class="badge-tag badge-interview">Step 3 Active</span>
+                    <h2>AI Technical & Behavioral Interview Coach</h2>
+                    <p class="section-subtitle">Practice role-specific interview questions. Get real-time AI evaluation, scores out of 10, and high-scoring model answers.</p>
+                </div>
+                <div class="source-status">
+                    <span class="source-badge source-interview">🎯 5 Questions per Session</span>
+                </div>
+            </div>
+
+            <!-- STAGE A: Setup & Role Selection -->
+            <div id="interviewSetupCard" class="card interview-card">
+                <div class="card-header">
+                    <h3>Select Your Target Job Role</h3>
+                    <p>Choose a pre-configured role or enter your custom dream role to generate tailored interview questions.</p>
+                </div>
+
+                <!-- Quick Suggested Role Banner (Auto-populated if resume analyzed) -->
+                <div id="resumeSuggestedNotice" class="resume-suggest-chip-box" style="display: none;">
+                    <span class="chip-label">💡 Recommended from your Resume:</span>
+                    <div id="suggestedRoleChips" class="suggested-chips"></div>
+                </div>
+
+                <!-- Quick Role Selection Pills -->
+                <div class="role-selector-group">
+                    <label class="input-label">Popular Industry Roles:</label>
+                    <div class="role-pills">
+                        <button type="button" class="role-pill-btn active" onclick="chooseRolePill(this, 'Python Developer')">Python Developer</button>
+                        <button type="button" class="role-pill-btn" onclick="chooseRolePill(this, 'Software Engineer')">Software Engineer</button>
+                        <button type="button" class="role-pill-btn" onclick="chooseRolePill(this, 'Backend Developer')">Backend Developer</button>
+                        <button type="button" class="role-pill-btn" onclick="chooseRolePill(this, 'Frontend Developer')">Frontend Developer</button>
+                        <button type="button" class="role-pill-btn" onclick="chooseRolePill(this, 'Data Analyst')">Data Analyst</button>
+                        <button type="button" class="role-pill-btn" onclick="chooseRolePill(this, 'Data Scientist')">Data Scientist</button>
+                        <button type="button" class="role-pill-btn" onclick="chooseRolePill(this, 'Machine Learning Engineer')">Machine Learning Engineer</button>
+                    </div>
+                </div>
+
+                <!-- Custom Role Input -->
+                <div class="custom-role-container">
+                    <label for="customRoleInput" class="input-label">Or Specify Custom Job Role:</label>
+                    <div class="custom-input-row">
+                        <input type="text" id="customRoleInput" placeholder="e.g. Cloud DevOps Engineer, Full Stack MERN Developer..." value="Python Developer">
+                        <button type="button" class="btn-start-interview" id="startInterviewBtn" onclick="startInterviewSession()">
+                            <span>🚀 Start Interview</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STAGE B: Active Interview In-Progress Card (Hidden by default) -->
+            <div id="interviewActiveCard" class="card interview-card" style="display: none;">
+                <div class="interview-active-header">
+                    <div class="header-left">
+                        <span class="active-role-tag" id="activeRoleDisplay">Python Developer</span>
+                        <span class="question-type-badge" id="activeQuestionType">Technical</span>
+                    </div>
+                    <div class="header-right">
+                        <span class="progress-text" id="questionProgressText">Question 1 of 5</span>
+                        <button type="button" class="btn-quit-interview" onclick="resetInterviewSetup()">✕ Exit</button>
+                    </div>
+                </div>
+
+                <div class="interview-progress-bar-bg">
+                    <div class="interview-progress-bar-fill" id="interviewProgressBarFill" style="width: 20%;"></div>
+                </div>
+
+                <div class="question-prompt-box">
+                    <div class="question-context" id="questionContextText">Core Python Data Structures</div>
+                    <h3 class="question-text" id="questionPromptText">Loading question prompt...</h3>
+                </div>
+
+                <div class="answer-section">
+                    <div class="answer-header">
+                        <label for="interviewAnswerInput">Your Answer:</label>
+                        <span class="word-counter" id="answerWordCount">0 words</span>
+                    </div>
+                    <textarea id="interviewAnswerInput" class="interview-textarea" rows="6" placeholder="Type your detailed answer here. Explain your reasoning, mention key technical terms, trade-offs, and examples..."></textarea>
+                    
+                    <div class="answer-action-bar">
+                        <button type="button" class="btn-evaluate" id="evaluateAnswerBtn" onclick="submitAnswerForEvaluation()">
+                            <span>✨ Evaluate Answer</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="evalLoadingBox" class="loading-box" style="display: none; margin-top: 1.5rem;">
+                    <div class="spinner"></div>
+                    <div class="loading-text">
+                        <h4>AI is evaluating your response...</h4>
+                        <p>Assessing technical accuracy, relevance, and clarity against industry standards...</p>
+                    </div>
+                </div>
+
+                <div id="evaluationFeedbackCard" class="feedback-card" style="display: none;">
+                    <div class="feedback-header">
+                        <div class="score-display-box">
+                            <span class="score-number" id="feedbackScoreNum">8.5</span>
+                            <span class="score-denom">/ 10</span>
+                        </div>
+                        <div class="score-status-info">
+                            <h4 id="scoreHeadline">Solid Answer</h4>
+                            <p id="scoreSubline">Here is your detailed AI performance evaluation breakdown.</p>
+                        </div>
+                    </div>
+
+                    <div class="feedback-metrics-grid">
+                        <div class="eval-metric-item">
+                            <span class="eval-metric-lbl">Technical Accuracy</span>
+                            <p class="eval-metric-val" id="evalMetricAccuracy">Accurate description of concepts</p>
+                        </div>
+                        <div class="eval-metric-item">
+                            <span class="eval-metric-lbl">Relevance</span>
+                            <p class="eval-metric-val" id="evalMetricRelevance">Directly answers the prompt</p>
+                        </div>
+                        <div class="eval-metric-item">
+                            <span class="eval-metric-lbl">Clarity</span>
+                            <p class="eval-metric-val" id="evalMetricClarity">Structured and well-phrased</p>
+                        </div>
+                    </div>
+
+                    <div class="feedback-split-grid">
+                        <div class="feedback-col feedback-good">
+                            <h5>✅ What Was Done Well</h5>
+                            <p id="feedbackDoneWell">Demonstrated sound foundational knowledge.</p>
+                        </div>
+                        <div class="feedback-col feedback-improve">
+                            <h5>⚠️ What Could Be Improved</h5>
+                            <p id="feedbackToImprove">Incorporate concrete examples and trade-offs.</p>
+                        </div>
+                    </div>
+
+                    <div class="model-answer-box">
+                        <div class="model-answer-header" onclick="toggleModelAnswer()">
+                            <h5>💡 Model High-Scoring Answer (Click to view)</h5>
+                            <span class="toggle-icon" id="modelToggleIcon">▼</span>
+                        </div>
+                        <div class="model-answer-content" id="modelAnswerContent">
+                            <p id="modelAnswerText">Sample high-scoring answer will appear here...</p>
+                        </div>
+                    </div>
+
+                    <div class="next-question-row">
+                        <button type="button" class="btn-primary btn-next-q" id="nextQuestionBtn" onclick="goToNextQuestion()">
+                            <span id="nextQuestionBtnText">Next Question</span> &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STAGE C: Final Interview Performance Summary Card (Hidden by default) -->
+            <div id="interviewSummaryCard" class="card summary-card" style="display: none;">
+                <div class="summary-hero">
+                    <div class="summary-trophy">🏆</div>
+                    <div class="summary-hero-text">
+                        <span class="summary-pill">Interview Completed</span>
+                        <h2>Interview Performance Report</h2>
+                        <p id="summaryRoleSubtitle">Role: Python Developer &bull; 5 Questions Evaluated</p>
+                    </div>
+                    <div class="overall-score-badge">
+                        <span class="big-score" id="summaryOverallScore">8.2</span>
+                        <span class="score-scale">out of 10</span>
+                        <span class="tier-label" id="summaryTierLabel">Solid Hire</span>
+                    </div>
+                </div>
+
+                <div class="summary-breakdown-grid">
+                    <div class="summary-box summary-strong">
+                        <div class="summary-box-title">
+                            <span>💪 Strong Areas</span>
+                        </div>
+                        <ul class="summary-list" id="summaryStrongList">
+                            <li>Clear understanding of fundamental concepts.</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-box summary-weak">
+                        <div class="summary-box-title">
+                            <span>📈 Areas to Improve</span>
+                        </div>
+                        <ul class="summary-list" id="summaryImproveList">
+                            <li>Add quantifiable results and STAR format examples.</li>
+                        </ul>
+                    </div>
+
+                    <div class="summary-box summary-topics">
+                        <div class="summary-box-title">
+                            <span>📚 Recommended Topics to Study</span>
+                        </div>
+                        <ul class="summary-list" id="summaryTopicsList">
+                            <li>Advanced system design & trade-offs.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="review-accordion-card">
+                    <h4 class="review-title">Detailed Q&A Transcript</h4>
+                    <div class="qa-transcript-list" id="qaTranscriptList"></div>
+                </div>
+
+                <div class="summary-actions-row">
+                    <button type="button" class="btn-primary" onclick="resetInterviewSetup()">
+                        <span>🔄 Practice Another Role</span>
+                    </button>
+                    <a href="#careerIntelligenceSection" class="btn-secondary">
+                        <span>📈 View Career Intelligence &rarr;</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- 5. STEP 4: CAREER INTELLIGENCE DASHBOARD SECTION         -->
+        <!-- ======================================================== -->
+        <section id="careerIntelligenceSection" class="career-intelligence-section">
+            <div class="section-title-row">
+                <div>
+                    <span class="badge-tag badge-intelligence">Step 4 Active &bull; Career Intelligence</span>
+                    <h2>Career Intelligence & Growth Dashboard</h2>
+                    <p class="section-subtitle">Real-time career readiness, personalized skill gap analysis, portfolio recommendations, and tailored 5-step learning roadmap.</p>
+                </div>
+                <div class="source-status">
+                    <span class="source-badge source-career" id="intelDataSourceBadge">⚡ Resume-Aligned Assessment</span>
+                </div>
+            </div>
+
+            <!-- Target Role Switcher Card -->
+            <div class="card intel-role-switcher-card">
+                <div class="role-switcher-header">
+                    <div>
+                        <h4>Target Career Track:</h4>
+                        <p>Switch target role to immediately recalibrate your readiness score, skill gaps, and learning roadmap.</p>
+                    </div>
+                    <div class="intel-custom-input-wrap">
+                        <input type="text" id="intelCustomRoleInput" placeholder="Custom role title..." value="Python Developer">
+                        <button type="button" class="btn-update-track" onclick="updateCareerIntelligence(document.getElementById('intelCustomRoleInput').value)">Recalibrate Track</button>
+                    </div>
+                </div>
+                <div class="intel-pills">
+                    <button type="button" class="intel-pill-btn active" onclick="switchIntelRole(this, 'Python Developer')">Python Developer</button>
+                    <button type="button" class="intel-pill-btn" onclick="switchIntelRole(this, 'Software Engineer')">Software Engineer</button>
+                    <button type="button" class="intel-pill-btn" onclick="switchIntelRole(this, 'Backend Developer')">Backend Developer</button>
+                    <button type="button" class="intel-pill-btn" onclick="switchIntelRole(this, 'Frontend Developer')">Frontend Developer</button>
+                    <button type="button" class="intel-pill-btn" onclick="switchIntelRole(this, 'Data Analyst')">Data Analyst</button>
+                    <button type="button" class="intel-pill-btn" onclick="switchIntelRole(this, 'Data Scientist')">Data Scientist</button>
+                    <button type="button" class="intel-pill-btn" onclick="switchIntelRole(this, 'Machine Learning Engineer')">Machine Learning Engineer</button>
+                </div>
+            </div>
+
+            <!-- Top Row: 1. CAREER READINESS & 2. SKILL GAP ANALYSIS -->
+            <div class="grid-layout-intel-top">
+                <!-- 1. Career Readiness -->
+                <div class="card readiness-card">
+                    <div class="card-header">
+                        <div class="header-icon-title">
+                            <span class="insight-icon icon-readiness">🎯</span>
+                            <div>
+                                <h3>1. Career Readiness Score</h3>
+                                <p>Competitiveness for <strong id="intelTargetRoleTitle">Python Developer</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="readiness-gauge-box">
+                        <div class="readiness-gauge-circle">
+                            <span class="readiness-pct" id="readinessScorePct">78%</span>
+                            <span class="readiness-sub">Readiness</span>
+                        </div>
+                        <div class="readiness-meta-content">
+                            <div class="readiness-status-badge" id="readinessTierBadge">Competitive Candidate</div>
+                            <p class="readiness-explanation" id="readinessExplanationText">
+                                Calculated from resume technical alignment (75%) against standard industry requirements for Python Developer. Complete an interview to factor in live technical scores.
+                            </p>
+                            <div class="readiness-data-source">
+                                <span class="data-source-pill" id="readinessSourcePill">Source: Resume-Based Assessment</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Skill Gap Analysis -->
+                <div class="card skill-gap-card">
+                    <div class="card-header">
+                        <div class="header-row">
+                            <div class="header-icon-title">
+                                <span class="insight-icon icon-skillgap">📊</span>
+                                <div>
+                                    <h3>2. Skill Gap Analysis</h3>
+                                    <p>Candidate competencies vs. expected market standards</p>
+                                </div>
+                            </div>
+                            <span class="stat-pill" id="skillMatchPctBadge"><strong>70%</strong> Match</span>
+                        </div>
+                    </div>
+
+                    <div class="gap-progress-wrap">
+                        <div class="gap-progress-label">
+                            <span>Core Skill Alignment</span>
+                            <span id="skillGapNumbers">7 of 10 skills matched</span>
+                        </div>
+                        <div class="gap-bar-bg">
+                            <div class="gap-bar-fill" id="gapProgressBarFill" style="width: 70%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="gap-columns-split">
+                        <div class="gap-col matched-col">
+                            <h5>✅ Matched Skills (<span id="matchedCount">0</span>)</h5>
+                            <div class="tags-container" id="intelMatchedSkillsList">
+                                <span class="tag-pill tag-tech">Python</span>
+                            </div>
+                        </div>
+                        <div class="gap-col missing-col">
+                            <h5>➕ Missing / Recommended (<span id="missingCount">0</span>)</h5>
+                            <div class="tags-container" id="intelMissingSkillsList">
+                                <span class="tag-pill tag-missing">Docker</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. ROLE MATCHING (Multi-Role Cards) -->
+            <div class="card intel-roles-card">
+                <div class="card-header">
+                    <div class="header-icon-title">
+                        <span class="insight-icon icon-roles">💼</span>
+                        <div>
+                            <h3>3. Role Matching & Alternative Career Tracks</h3>
+                            <p>Explore suitability percentages and skill overlaps across adjacent career tracks.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="intel-roles-grid" id="intelRolesGrid">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- 4. PERSONALIZED LEARNING ROADMAP (5 STEPS) -->
+            <div class="card intel-roadmap-card">
+                <div class="card-header">
+                    <div class="header-icon-title">
+                        <span class="insight-icon icon-learning">🗺️</span>
+                        <div>
+                            <h3>4. Personalized 5-Step Learning Roadmap</h3>
+                            <p>Sequential action plan to bridge skill gaps and reach 95%+ hiring readiness for <strong id="roadmapRoleTitle">Python Developer</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="roadmap-timeline" id="learningRoadmapTimeline">
+                    <!-- 5 sequential timeline steps rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- 5. PROJECT RECOMMENDATIONS & 6. RESUME CHECKLIST (SPLIT GRID) -->
+            <div class="grid-layout-split">
+                <!-- 5. Project Recommendations -->
+                <div class="card intel-projects-card">
+                    <div class="card-header">
+                        <div class="header-icon-title">
+                            <span class="insight-icon icon-projects">🚀</span>
+                            <div>
+                                <h3>5. Portfolio Project Recommendations</h3>
+                                <p>High-impact projects tailored to prove technical competency</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="project-cards-stack" id="recommendedProjectsStack">
+                        <!-- Project cards populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- 6. Resume Improvement Checklist -->
+                <div class="card intel-checklist-card">
+                    <div class="card-header">
+                        <div class="header-icon-title">
+                            <span class="insight-icon icon-checklist">📋</span>
+                            <div>
+                                <h3>6. Resume Improvement Checklist</h3>
+                                <p>Actionable enhancements to boost recruiter call-back rates</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="checklist-items-stack" id="resumeChecklistStack">
+                        <!-- Checklist items populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. FINAL CAREER SUMMARY -->
+            <div class="card intel-summary-card">
+                <div class="card-header">
+                    <div class="header-icon-title">
+                        <span class="insight-icon icon-summary">🏆</span>
+                        <div>
+                            <h3>7. Executive Career Summary & Recommended Action</h3>
+                            <p>Synthesis of candidate market positioning, core strengths, and immediate next steps.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="intel-summary-content">
+                    <div class="summary-statement-box">
+                        <p id="intelProfileSummaryText">Promising technical candidate with solid foundations...</p>
+                    </div>
+
+                    <div class="summary-details-grid">
+                        <div class="summary-detail-col">
+                            <h5>💪 Standout Strengths</h5>
+                            <ul class="summary-points-list" id="intelSummaryStrengthsList">
+                                <li>Solid technical fundamentals in core programming.</li>
+                            </ul>
+                        </div>
+                        <div class="summary-detail-col">
+                            <h5>⚡ Priority Growth Areas</h5>
+                            <ul class="summary-points-list list-priority" id="intelSummaryPrioritiesList">
+                                <li>Close top skill gap through hands-on project implementation.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="recommended-action-callout">
+                        <div class="action-callout-icon">👉</div>
+                        <div class="action-callout-text">
+                            <strong>Recommended Next Action:</strong>
+                            <p id="intelRecommendedActionText">Begin Step 1 of your Personalized Learning Roadmap...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- 6. STEP 6: SQLITE CAREER HISTORY SECTION                 -->
+        <!-- ======================================================== -->
+        <section id="careerHistorySection" class="career-history-section">
+            <div class="section-title-row">
+                <div>
+                    <span class="badge-tag badge-history">Step 6 Active &bull; SQLite Database</span>
+                    <h2>Career History & Saved Records</h2>
+                    <p class="section-subtitle">Persistent session activity log. Review past resume analyses, technical interview scores, and career intelligence reports saved in your local database.</p>
+                </div>
+                <div class="history-actions-bar">
+                    <button type="button" class="btn-history-action btn-refresh" onclick="loadCareerHistory()" title="Refresh records from SQLite">
+                        <span>🔄 Refresh</span>
+                    </button>
+                    <button type="button" class="btn-history-action btn-clear" onclick="openClearHistoryModal()" title="Clear session history">
+                        <span>🗑️ Clear History</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Candidate Profile Status Bar -->
+            <div class="card candidate-session-bar" id="candidateSessionBar">
+                <div class="candidate-session-info">
+                    <span class="session-avatar">👤</span>
+                    <div>
+                        <h4 id="sessionCandidateName">Current Candidate Session</h4>
+                        <p id="sessionCandidateMeta">Active local session &bull; All evaluations saved automatically to SQLite</p>
+                    </div>
+                </div>
+                <div class="history-filter-pills">
+                    <button type="button" class="hist-filter-btn active" onclick="filterHistory('all', this)">All Activities (<span id="countAll">0</span>)</button>
+                    <button type="button" class="hist-filter-btn" onclick="filterHistory('resume_analysis', this)">📄 Resumes (<span id="countResume">0</span>)</button>
+                    <button type="button" class="hist-filter-btn" onclick="filterHistory('interview_session', this)">🎯 Interviews (<span id="countInterview">0</span>)</button>
+                    <button type="button" class="hist-filter-btn" onclick="filterHistory('career_report', this)">📈 Reports (<span id="countReport">0</span>)</button>
+                </div>
+            </div>
+
+            <!-- History Feed Container -->
+            <div class="history-feed" id="historyFeed">
+                <!-- Loading State -->
+                <div id="historyLoading" class="history-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Loading your saved career records from SQLite...</p>
+                </div>
+
+                <!-- Empty State -->
+                <div id="historyEmptyState" class="card empty-history-card">
+                    <div class="empty-icon">📁</div>
+                    <h3>No career history yet.</h3>
+                    <p>Complete a resume analysis or interview to start building your career history.</p>
+                    <div class="empty-history-actions">
+                        <a href="#uploadForm" class="btn-primary" style="text-decoration: none;"><span>📄 Upload Resume</span></a>
+                        <a href="#interviewCoachSection" class="btn-secondary" style="text-decoration: none;"><span>🎯 Start Interview</span></a>
+                    </div>
+                </div>
+
+                <!-- Cards Grid List -->
+                <div id="historyCardsGrid" class="history-cards-grid" style="display: none;">
+                    <!-- Dynamically populated via JS -->
+                </div>
+            </div>
+
+            <!-- Modal: View History Record Details -->
+            <div id="historyDetailModal" class="modal-overlay" style="display: none;">
+                <div class="modal-container">
+                    <div class="modal-header">
+                        <div class="modal-title-group">
+                            <span class="modal-icon" id="modalIcon">📄</span>
+                            <div>
+                                <h3 id="modalTitle">Record Details</h3>
+                                <span class="modal-timestamp" id="modalTimestamp">Sep 19, 2026</span>
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close-btn" onclick="closeHistoryDetailModal()">&times;</button>
+                    </div>
+                    <div class="modal-body" id="modalBodyContent">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="closeHistoryDetailModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Clear History Confirmation -->
+            <div id="clearHistoryModal" class="modal-overlay" style="display: none;">
+                <div class="modal-container modal-container-sm">
+                    <div class="modal-header">
+                        <div class="modal-title-group">
+                            <span class="modal-icon">⚠️</span>
+                            <div>
+                                <h3>Clear Career History</h3>
+                                <span class="modal-timestamp">Confirmation Required</span>
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close-btn" onclick="closeClearHistoryModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to clear your saved career history?</p>
+                        <p class="modal-subtext">This will permanently delete your session's resume scans, interview performance, and career reports from <code>careerpilot.db</code>. This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer modal-footer-split">
+                        <button type="button" class="btn-secondary" onclick="closeClearHistoryModal()">Cancel</button>
+                        <button type="button" class="btn-danger" id="confirmClearHistoryBtn" onclick="executeClearHistory()">Yes, Clear History</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Project Roadmap Progress Tracker -->
+        <section class="card roadmap-card">
+            <div class="roadmap-header">
+                <h3>Project Roadmap Progress</h3>
+                <span class="roadmap-badge">All 9 Steps Active</span>
+            </div>
+            <div class="roadmap-steps">
+                <div class="step completed">
+                    <div class="step-num">1</div>
+                    <div class="step-info">
+                        <span class="step-title">Upload PDF</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">2</div>
+                    <div class="step-info">
+                        <span class="step-title">Extract Text</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">3</div>
+                    <div class="step-info">
+                        <span class="step-title">Analyze Resume</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">4</div>
+                    <div class="step-info">
+                        <span class="step-title">Identify Skills</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">5</div>
+                    <div class="step-info">
+                        <span class="step-title">Suggest Roles</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">6</div>
+                    <div class="step-info">
+                        <span class="step-title">Interview Qs</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">7</div>
+                    <div class="step-info">
+                        <span class="step-title">Enter Answers</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">8</div>
+                    <div class="step-info">
+                        <span class="step-title">AI Feedback</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step completed">
+                    <div class="step-num">9</div>
+                    <div class="step-info">
+                        <span class="step-title">Career Roadmap</span>
+                        <span class="step-status">Completed</span>
+                    </div>
+                </div>
+                <div class="step active-step">
+                    <div class="step-num">10</div>
+                    <div class="step-info">
+                        <span class="step-title">SQLite History</span>
+                        <span class="step-status">Step 6 Active</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Global state for unifying Step 2, Step 3, and Step 4
+        let latestResumeAnalysis = null;
+        let latestInterviewSummary = null;
+        let currentIntelRole = 'Python Developer';
+
+        // File selection label
+        const fileInput = document.getElementById('fileInput');
+        const selectedFileName = document.getElementById('selectedFileName');
+
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files.length > 0) {
+                    selectedFileName.textContent = 'Selected: ' + this.files[0].name;
+                    selectedFileName.style.display = 'inline-block';
+                } else {
+                    selectedFileName.style.display = 'none';
+                }
+            });
+        }
+
+        function copyExtractedText() {
+            const content = document.getElementById('extractedTextContent');
+            if (content) {
+                navigator.clipboard.writeText(content.innerText).then(() => {
+                    const copyBtn = document.getElementById('copyBtn');
+                    copyBtn.textContent = '✓ Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 Copy Text';
+                    }, 2000);
+                });
+            }
+        }
+
+        // ==========================================
+        // RESUME ANALYSIS (STEP 2)
+        // ==========================================
+        function handleAnalyzeClick(event) {
+            const resumeTextEl = document.getElementById('extractedTextContent');
+            if (!resumeTextEl) return;
+
+            const resumeText = resumeTextEl.innerText.trim();
+            if (!resumeText) return;
+
+            event.preventDefault();
+
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const loadingBox = document.getElementById('aiLoadingBox');
+            const dashboardSection = document.getElementById('analysisDashboardSection');
+
+            analyzeBtn.disabled = true;
+            loadingBox.style.display = 'flex';
+
+            const statusMsgs = [
+                'Reading extracted resume content...',
+                'Detecting candidate skills and domain...',
+                'Evaluating experience and achievements...',
+                'Matching target job roles and skill gaps...',
+                'Finalizing AI intelligence dashboard...'
+            ];
+            let msgIdx = 0;
+            const statusEl = document.getElementById('loadingStatus');
+            const statusInterval = setInterval(() => {
+                msgIdx = (msgIdx + 1) % statusMsgs.length;
+                if (statusEl) statusEl.textContent = statusMsgs[msgIdx];
+            }, 1200);
+
+            fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: resumeText })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok');
+                return res.json();
+            })
+            .then(data => {
+                clearInterval(statusInterval);
+                loadingBox.style.display = 'none';
+                analyzeBtn.disabled = false;
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+
+                latestResumeAnalysis = data;
+                renderAnalysisData(data);
+                dashboardSection.style.display = 'block';
+                dashboardSection.scrollIntoView({ behavior: 'smooth' });
+
+                // Immediately recalibrate Career Intelligence with the analyzed resume
+                updateCareerIntelligence(currentIntelRole);
+            })
+            .catch(err => {
+                clearInterval(statusInterval);
+                loadingBox.style.display = 'none';
+                analyzeBtn.disabled = false;
+                console.error('Analysis request error:', err);
+                document.getElementById('analyzeForm').submit();
+            });
+        }
+
+        function renderAnalysisData(data) {
+            const statusBox = document.getElementById('modelSourceStatus');
+            if (statusBox) {
+                if (data.source === 'live_gemini') {
+                    statusBox.innerHTML = '<span class="source-badge source-live">🟢 Powered by Google Gemini 2.0</span>';
+                } else {
+                    statusBox.innerHTML = '<span class="source-badge source-demo">⚡ Smart Heuristic Analyzer (Hackathon Demo Mode)</span>';
+                }
+            }
+
+            const noticeBanner = document.getElementById('analysisNoticeBanner');
+            const noticeText = document.getElementById('noticeBannerText');
+            if (noticeBanner && data.notice) {
+                if (noticeText) noticeText.textContent = data.notice;
+                noticeBanner.style.display = 'flex';
+            }
+
+            document.getElementById('candidateName').textContent = data.candidate_name || 'Candidate';
+            document.getElementById('candidateSummary').textContent = data.summary || 'Summary unavailable.';
+
+            document.getElementById('metricTechCount').textContent = (data.technical_skills || []).length;
+            document.getElementById('metricRolesCount').textContent = (data.suggested_roles || []).length;
+            document.getElementById('metricStrengthsCount').textContent = (data.strengths || []).length;
+            document.getElementById('metricMissingCount').textContent = (data.missing_skills || []).length;
+
+            const techList = document.getElementById('technicalSkillsList');
+            techList.innerHTML = '';
+            (data.technical_skills || []).forEach(skill => {
+                const span = document.createElement('span');
+                span.className = 'tag-pill tag-tech';
+                span.textContent = skill;
+                techList.appendChild(span);
+            });
+
+            const softList = document.getElementById('softSkillsList');
+            softList.innerHTML = '';
+            (data.soft_skills || []).forEach(skill => {
+                const span = document.createElement('span');
+                span.className = 'tag-pill tag-soft';
+                span.textContent = skill;
+                softList.appendChild(span);
+            });
+
+            const missingList = document.getElementById('missingSkillsList');
+            missingList.innerHTML = '';
+            (data.missing_skills || []).forEach(skill => {
+                const span = document.createElement('span');
+                span.className = 'tag-pill tag-missing';
+                span.textContent = '➕ ' + skill;
+                missingList.appendChild(span);
+            });
+
+            const rolesList = document.getElementById('suggestedRolesList');
+            rolesList.innerHTML = '';
+            (data.suggested_roles || []).forEach(role => {
+                const item = document.createElement('div');
+                item.className = 'role-item role-clickable';
+                item.onclick = function() { selectRoleForInterview(role.title); };
+                const score = role.match_score || '80%';
+                item.innerHTML = `
+                    <div class="role-item-header">
+                        <h4 class="role-title">${escapeHtml(role.title)}</h4>
+                        <span class="role-score-badge">${escapeHtml(score)}</span>
+                    </div>
+                    <div class="score-bar-bg">
+                        <div class="score-bar-fill" style="width: ${score.includes('%') ? score : score + '%'};"></div>
+                    </div>
+                    <p class="role-reason">${escapeHtml(role.reason || '')}</p>
+                    <span class="role-cta">🎯 Practice this role in Interview Coach &rarr;</span>
+                `;
+                rolesList.appendChild(item);
+            });
+
+            if (data.suggested_roles && data.suggested_roles.length > 0) {
+                const noticeBox = document.getElementById('resumeSuggestedNotice');
+                const chipsContainer = document.getElementById('suggestedRoleChips');
+                chipsContainer.innerHTML = '';
+                data.suggested_roles.forEach(r => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'suggested-chip-btn';
+                    btn.textContent = `${r.title} (${r.match_score})`;
+                    btn.onclick = () => selectRoleForInterview(r.title);
+                    chipsContainer.appendChild(btn);
+                });
+                noticeBox.style.display = 'flex';
+            }
+
+            const strengthsList = document.getElementById('strengthsList');
+            strengthsList.innerHTML = '';
+            (data.strengths || []).forEach(s => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="check-icon">✓</span><span>${escapeHtml(s)}</span>`;
+                strengthsList.appendChild(li);
+            });
+
+            const improvementsList = document.getElementById('improvementsList');
+            improvementsList.innerHTML = '';
+            (data.resume_improvements || []).forEach(imp => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="bullet-icon">⚡</span><span>${escapeHtml(imp)}</span>`;
+                improvementsList.appendChild(li);
+            });
+
+            const expList = document.getElementById('experienceList');
+            expList.innerHTML = '';
+            (data.experience || []).forEach(exp => {
+                const item = document.createElement('div');
+                item.className = 'detail-item';
+                item.innerHTML = `
+                    <div class="detail-item-title">${escapeHtml(exp.role || '')}</div>
+                    <div class="detail-item-sub">${escapeHtml(exp.company || '')} &bull; ${escapeHtml(exp.duration || '')}</div>
+                    <p class="detail-item-desc">${escapeHtml(exp.description || '')}</p>
+                `;
+                expList.appendChild(item);
+            });
+
+            const projList = document.getElementById('projectsList');
+            projList.innerHTML = '';
+            (data.projects || []).forEach(proj => {
+                const item = document.createElement('div');
+                item.className = 'detail-item';
+                const tags = (proj.technologies || []).map(t => `<span class="proj-tag">${escapeHtml(t)}</span>`).join('');
+                item.innerHTML = `
+                    <div class="detail-item-title">${escapeHtml(proj.title || '')}</div>
+                    <div class="proj-tags">${tags}</div>
+                    <p class="detail-item-desc">${escapeHtml(proj.description || '')}</p>
+                `;
+                projList.appendChild(item);
+            });
+
+            const eduList = document.getElementById('educationList');
+            eduList.innerHTML = '';
+            (data.education || []).forEach(edu => {
+                const item = document.createElement('div');
+                item.className = 'detail-item';
+                item.innerHTML = `
+                    <div class="detail-item-title">${escapeHtml(edu.degree || '')}</div>
+                    <div class="detail-item-sub">${escapeHtml(edu.institution || '')} &bull; ${escapeHtml(edu.year || '')}</div>
+                    ${edu.details ? `<p class="detail-item-desc">${escapeHtml(edu.details)}</p>` : ''}
+                `;
+                eduList.appendChild(item);
+            });
+
+            const certList = document.getElementById('certificationsList');
+            certList.innerHTML = '';
+            if (data.certifications && data.certifications.length > 0) {
+                data.certifications.forEach(cert => {
+                    const span = document.createElement('span');
+                    span.className = 'cert-pill';
+                    span.textContent = cert;
+                    certList.appendChild(span);
+                });
+            } else {
+                certList.innerHTML = '<span class="cert-pill empty-cert">None recorded</span>';
+            }
+        }
+
+        // ==========================================
+        // AI INTERVIEW COACH (STEP 3) LOGIC
+        // ==========================================
+        let currentInterview = {
+            role: 'Python Developer',
+            questions: [],
+            currentIndex: 0,
+            history: []
+        };
+
+        function chooseRolePill(btn, roleName) {
+            document.querySelectorAll('.role-pill-btn').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const input = document.getElementById('customRoleInput');
+            if (input) input.value = roleName;
+            currentInterview.role = roleName;
+        }
+
+        function selectRoleForInterview(roleName) {
+            const input = document.getElementById('customRoleInput');
+            if (input) input.value = roleName;
+            currentInterview.role = roleName;
+
+            document.querySelectorAll('.role-pill-btn').forEach(p => {
+                if (p.textContent.trim().toLowerCase() === roleName.toLowerCase()) {
+                    p.classList.add('active');
+                } else {
+                    p.classList.remove('active');
+                }
+            });
+
+            const coachSec = document.getElementById('interviewCoachSection');
+            if (coachSec) coachSec.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function startInterviewSession() {
+            const customInput = document.getElementById('customRoleInput');
+            const role = (customInput && customInput.value.trim()) ? customInput.value.trim() : 'Python Developer';
+            currentInterview.role = role;
+            currentInterview.history = [];
+            currentInterview.currentIndex = 0;
+
+            const resumeEl = document.getElementById('extractedTextContent');
+            const resumeText = resumeEl ? resumeEl.innerText.trim() : '';
+
+            const startBtn = document.getElementById('startInterviewBtn');
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span>⏳ Preparing Questions...</span>';
+
+            fetch('/interview/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: role, resume_text: resumeText })
+            })
+            .then(res => res.json())
+            .then(data => {
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span>🚀 Start Interview</span>';
+
+                if (data.questions && data.questions.length > 0) {
+                    currentInterview.questions = data.questions;
+                    loadQuestionView(0);
+                    document.getElementById('interviewSetupCard').style.display = 'none';
+                    document.getElementById('interviewActiveCard').style.display = 'block';
+                    document.getElementById('interviewSummaryCard').style.display = 'none';
+                    document.getElementById('interviewActiveCard').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert('Could not generate questions. Please try again.');
+                }
+            })
+            .catch(err => {
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<span>🚀 Start Interview</span>';
+                console.error(err);
+                alert('Error starting interview session. Please try again.');
+            });
+        }
+
+        function loadQuestionView(index) {
+            currentInterview.currentIndex = index;
+            const q = currentInterview.questions[index];
+
+            document.getElementById('activeRoleDisplay').textContent = currentInterview.role;
+            document.getElementById('activeQuestionType').textContent = q.type || 'Technical';
+            document.getElementById('questionProgressText').textContent = `Question ${index + 1} of ${currentInterview.questions.length}`;
+            
+            const progressPercent = ((index + 1) / currentInterview.questions.length) * 100;
+            document.getElementById('interviewProgressBarFill').style.width = progressPercent + '%';
+
+            document.getElementById('questionContextText').textContent = q.context || `${currentInterview.role} Competency`;
+            document.getElementById('questionPromptText').textContent = q.question;
+
+            const answerInput = document.getElementById('interviewAnswerInput');
+            answerInput.value = '';
+            answerInput.disabled = false;
+            document.getElementById('answerWordCount').textContent = '0 words';
+
+            document.getElementById('evaluationFeedbackCard').style.display = 'none';
+            document.getElementById('evalLoadingBox').style.display = 'none';
+            document.getElementById('evaluateAnswerBtn').style.display = 'inline-flex';
+            document.getElementById('evaluateAnswerBtn').disabled = false;
+
+            const nextBtnText = document.getElementById('nextQuestionBtnText');
+            if (index === currentInterview.questions.length - 1) {
+                nextBtnText.textContent = '🎉 Complete Interview & View Summary';
+            } else {
+                nextBtnText.textContent = 'Next Question';
+            }
+
+            answerInput.focus();
+        }
+
+        const answerTextarea = document.getElementById('interviewAnswerInput');
+        if (answerTextarea) {
+            answerTextarea.addEventListener('input', function() {
+                const words = this.value.trim() ? this.value.trim().split(/\s+/).length : 0;
+                document.getElementById('answerWordCount').textContent = `${words} words`;
+            });
+        }
+
+        function submitAnswerForEvaluation() {
+            const answerText = document.getElementById('interviewAnswerInput').value.trim();
+            if (!answerText) {
+                alert('Please type your answer before clicking Evaluate.');
+                return;
+            }
+
+            const q = currentInterview.questions[currentInterview.currentIndex];
+            const evalBtn = document.getElementById('evaluateAnswerBtn');
+            const evalLoading = document.getElementById('evalLoadingBox');
+            const feedbackCard = document.getElementById('evaluationFeedbackCard');
+
+            evalBtn.disabled = true;
+            evalLoading.style.display = 'flex';
+
+            fetch('/interview/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    role: currentInterview.role,
+                    question: q.question,
+                    answer: answerText,
+                    question_type: q.type || 'Technical'
+                })
+            })
+            .then(res => res.json())
+            .then(evaluation => {
+                evalLoading.style.display = 'none';
+
+                currentInterview.history.push({
+                    question: q.question,
+                    type: q.type || 'Technical',
+                    answer: answerText,
+                    evaluation: evaluation
+                });
+
+                renderAnswerFeedback(evaluation);
+                feedbackCard.style.display = 'block';
+                evalBtn.style.display = 'none';
+                document.getElementById('interviewAnswerInput').disabled = true;
+                feedbackCard.scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(err => {
+                evalLoading.style.display = 'none';
+                evalBtn.disabled = false;
+                console.error(err);
+                alert('Error evaluating answer. Please try again.');
+            });
+        }
+
+        function renderAnswerFeedback(ev) {
+            const scoreNum = document.getElementById('feedbackScoreNum');
+            scoreNum.textContent = ev.score;
+
+            const scoreDisplay = document.querySelector('.score-display-box');
+            if (ev.score >= 8.0) {
+                scoreDisplay.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                document.getElementById('scoreHeadline').textContent = '🌟 Excellent Response!';
+            } else if (ev.score >= 6.0) {
+                scoreDisplay.style.background = 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)';
+                document.getElementById('scoreHeadline').textContent = '👍 Solid Answer with Room to Elevate';
+            } else {
+                scoreDisplay.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                document.getElementById('scoreHeadline').textContent = '⚠️ Needs Further Elaboration & Detail';
+            }
+
+            document.getElementById('evalMetricAccuracy').textContent = ev.technical_accuracy || 'N/A';
+            document.getElementById('evalMetricRelevance').textContent = ev.relevance || 'N/A';
+            document.getElementById('evalMetricClarity').textContent = ev.clarity || 'N/A';
+
+            document.getElementById('feedbackDoneWell').textContent = ev.what_was_done_well || 'Good initial attempt.';
+            document.getElementById('feedbackToImprove').textContent = ev.what_could_be_improved || 'Incorporate more specific examples.';
+            document.getElementById('modelAnswerText').textContent = ev.better_example_answer || 'Model answer not available.';
+        }
+
+        function toggleModelAnswer() {
+            const content = document.getElementById('modelAnswerContent');
+            const icon = document.getElementById('modelToggleIcon');
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'block';
+                icon.textContent = '▲';
+            }
+        }
+
+        function goToNextQuestion() {
+            if (currentInterview.currentIndex + 1 < currentInterview.questions.length) {
+                loadQuestionView(currentInterview.currentIndex + 1);
+            } else {
+                finishInterviewAndShowSummary();
+            }
+        }
+
+        function finishInterviewAndShowSummary() {
+            document.getElementById('interviewActiveCard').style.display = 'none';
+            const summaryCard = document.getElementById('interviewSummaryCard');
+            summaryCard.style.display = 'block';
+
+            document.getElementById('summaryRoleSubtitle').textContent = `Role: ${currentInterview.role} • ${currentInterview.history.length} Questions Evaluated`;
+
+            fetch('/interview/summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    role: currentInterview.role,
+                    history: currentInterview.history
+                })
+            })
+            .then(res => res.json())
+            .then(summary => {
+                latestInterviewSummary = summary;
+                document.getElementById('summaryOverallScore').textContent = summary.overall_score || '7.5';
+                document.getElementById('summaryTierLabel').textContent = summary.performance_tier || 'Solid Candidate';
+
+                const strongList = document.getElementById('summaryStrongList');
+                strongList.innerHTML = '';
+                (summary.strong_areas || []).forEach(s => {
+                    const li = document.createElement('li');
+                    li.textContent = s;
+                    strongList.appendChild(li);
+                });
+
+                const improveList = document.getElementById('summaryImproveList');
+                improveList.innerHTML = '';
+                (summary.areas_to_improve || []).forEach(w => {
+                    const li = document.createElement('li');
+                    li.textContent = w;
+                    improveList.appendChild(li);
+                });
+
+                const topicsList = document.getElementById('summaryTopicsList');
+                topicsList.innerHTML = '';
+                (summary.recommended_topics || []).forEach(t => {
+                    const li = document.createElement('li');
+                    li.textContent = t;
+                    topicsList.appendChild(li);
+                });
+
+                const transcriptContainer = document.getElementById('qaTranscriptList');
+                transcriptContainer.innerHTML = '';
+                currentInterview.history.forEach((h, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'transcript-item';
+                    item.innerHTML = `
+                        <div class="transcript-q-row">
+                            <span class="transcript-num">Q${idx+1} [${escapeHtml(h.type)}]</span>
+                            <strong>${escapeHtml(h.question)}</strong>
+                            <span class="transcript-score-pill">${h.evaluation.score} / 10</span>
+                        </div>
+                        <div class="transcript-a">
+                            <strong>Your Answer:</strong> ${escapeHtml(h.answer)}
+                        </div>
+                        <div class="transcript-feedback">
+                            <strong>Feedback:</strong> ${escapeHtml(h.evaluation.what_could_be_improved || '')}
+                        </div>
+                    `;
+                    transcriptContainer.appendChild(item);
+                });
+
+                summaryCard.scrollIntoView({ behavior: 'smooth' });
+
+                // Recalibrate Career Intelligence with combined interview score
+                updateCareerIntelligence(currentInterview.role);
+            })
+            .catch(err => {
+                console.error(err);
+                summaryCard.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+
+        function resetInterviewSetup() {
+            document.getElementById('interviewActiveCard').style.display = 'none';
+            document.getElementById('interviewSummaryCard').style.display = 'none';
+            document.getElementById('interviewSetupCard').style.display = 'block';
+            document.getElementById('interviewSetupCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ==========================================
+        // CAREER INTELLIGENCE DASHBOARD (STEP 4)
+        // ==========================================
+        function switchIntelRole(btn, roleName) {
+            document.querySelectorAll('.intel-pill-btn').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const customInput = document.getElementById('intelCustomRoleInput');
+            if (customInput) customInput.value = roleName;
+            updateCareerIntelligence(roleName);
+        }
+
+        function updateCareerIntelligence(roleName) {
+            if (!roleName || !roleName.trim()) roleName = 'Python Developer';
+            currentIntelRole = roleName.trim();
+
+            document.getElementById('intelTargetRoleTitle').textContent = currentIntelRole;
+            document.getElementById('roadmapRoleTitle').textContent = currentIntelRole;
+
+            fetch('/career-intelligence', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    role: currentIntelRole,
+                    resume_analysis: latestResumeAnalysis,
+                    interview_summary: latestInterviewSummary
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                renderCareerIntelligence(data);
+            })
+            .catch(err => {
+                console.error('Career intelligence fetch error:', err);
+            });
+        }
+
+        function renderCareerIntelligence(data) {
+            // 1. Career Readiness
+            const readiness = data.readiness || {};
+            const pct = readiness.percentage || 75;
+            document.getElementById('readinessScorePct').textContent = `${pct}%`;
+            document.getElementById('readinessExplanationText').textContent = readiness.explanation || '';
+            document.getElementById('readinessSourcePill').textContent = `Source: ${readiness.source || 'Assessment'}`;
+            
+            const tierBadge = document.getElementById('readinessTierBadge');
+            if (pct >= 85) {
+                tierBadge.textContent = '🌟 High Market Competitiveness';
+                tierBadge.className = 'readiness-status-badge tier-high';
+            } else if (pct >= 70) {
+                tierBadge.textContent = '👍 Competitive Candidate';
+                tierBadge.className = 'readiness-status-badge tier-medium';
+            } else {
+                tierBadge.textContent = '📈 Developing Profile';
+                tierBadge.className = 'readiness-status-badge tier-dev';
+            }
+
+            // 2. Skill Gap Analysis
+            const gap = data.skill_gap || {};
+            const matchedSkills = gap.matched_skills || [];
+            const missingSkills = gap.missing_skills || [];
+            const matchPct = gap.match_percentage || 70;
+
+            document.getElementById('skillMatchPctBadge').innerHTML = `<strong>${matchPct}%</strong> Match`;
+            document.getElementById('skillGapNumbers').textContent = `${matchedSkills.length} of ${(gap.expected_skills || []).length} skills matched`;
+            document.getElementById('gapProgressBarFill').style.width = `${matchPct}%`;
+            document.getElementById('matchedCount').textContent = matchedSkills.length;
+            document.getElementById('missingCount').textContent = missingSkills.length;
+
+            const matchedContainer = document.getElementById('intelMatchedSkillsList');
+            matchedContainer.innerHTML = '';
+            matchedSkills.forEach(s => {
+                const span = document.createElement('span');
+                span.className = 'tag-pill tag-tech';
+                span.textContent = `✓ ${s}`;
+                matchedContainer.appendChild(span);
+            });
+
+            const missingContainer = document.getElementById('intelMissingSkillsList');
+            missingContainer.innerHTML = '';
+            missingSkills.forEach(s => {
+                const span = document.createElement('span');
+                span.className = 'tag-pill tag-missing';
+                span.textContent = `➕ ${s}`;
+                missingContainer.appendChild(span);
+            });
+
+            // 3. Multi-Role Matching
+            const rolesGrid = document.getElementById('intelRolesGrid');
+            rolesGrid.innerHTML = '';
+            (data.role_matching || []).forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'intel-role-item';
+                div.innerHTML = `
+                    <div class="intel-role-head">
+                        <h4>${escapeHtml(r.role)}</h4>
+                        <span class="role-score-badge">${escapeHtml(r.match_percentage)}</span>
+                    </div>
+                    <div class="score-bar-bg">
+                        <div class="score-bar-fill" style="width: ${escapeHtml(r.match_percentage)};"></div>
+                    </div>
+                    <p class="intel-role-expl">${escapeHtml(r.explanation)}</p>
+                    <div class="role-skill-preview">
+                        <small><strong>Matched:</strong> ${(r.matching_skills || []).slice(0, 3).join(', ') || 'Foundational'}</small><br>
+                        <small class="text-missing"><strong>Skill Gaps:</strong> ${(r.missing_skills || []).slice(0, 2).join(', ') || 'None'}</small>
+                    </div>
+                `;
+                rolesGrid.appendChild(div);
+            });
+
+            // 4. Personalized 5-Step Learning Roadmap
+            const roadmapTimeline = document.getElementById('learningRoadmapTimeline');
+            roadmapTimeline.innerHTML = '';
+            (data.learning_roadmap || []).forEach(step => {
+                const item = document.createElement('div');
+                item.className = 'roadmap-step-item';
+                item.innerHTML = `
+                    <div class="step-badge-col">
+                        <div class="step-circle">${step.step}</div>
+                        <span class="step-timeframe">${escapeHtml(step.timeframe)}</span>
+                    </div>
+                    <div class="step-content-col">
+                        <span class="step-phase-tag">${escapeHtml(step.phase)}</span>
+                        <h4>${escapeHtml(step.title)}</h4>
+                        <p>${escapeHtml(step.description)}</p>
+                    </div>
+                `;
+                roadmapTimeline.appendChild(item);
+            });
+
+            // 5. Portfolio Project Recommendations
+            const projectsStack = document.getElementById('recommendedProjectsStack');
+            projectsStack.innerHTML = '';
+            (data.recommended_projects || []).forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'intel-project-item';
+                const tags = (p.skills_practiced || []).map(s => `<span class="proj-tag">${escapeHtml(s)}</span>`).join('');
+                card.innerHTML = `
+                    <h4>${escapeHtml(p.title)}</h4>
+                    <div class="proj-tags">${tags}</div>
+                    <p>${escapeHtml(p.description)}</p>
+                `;
+                projectsStack.appendChild(card);
+            });
+
+            // 6. Resume Improvement Checklist
+            const checklistStack = document.getElementById('resumeChecklistStack');
+            checklistStack.innerHTML = '';
+            (data.resume_checklist || []).forEach(item => {
+                const chk = document.createElement('div');
+                chk.className = 'checklist-item';
+                chk.innerHTML = `
+                    <span class="checklist-icon">${item.icon || '📌'}</span>
+                    <div class="checklist-text">
+                        <span class="checklist-cat">${escapeHtml(item.category)}</span>
+                        <h5>${escapeHtml(item.title)}</h5>
+                        <p>${escapeHtml(item.detail)}</p>
+                    </div>
+                `;
+                checklistStack.appendChild(chk);
+            });
+
+            // 7. Final Career Summary
+            const summary = data.career_summary || {};
+            document.getElementById('intelProfileSummaryText').textContent = summary.profile_summary || '';
+            document.getElementById('intelRecommendedActionText').textContent = summary.recommended_next_action || '';
+
+            const strList = document.getElementById('intelSummaryStrengthsList');
+            strList.innerHTML = '';
+            (summary.strong_areas || []).forEach(s => {
+                const li = document.createElement('li');
+                li.textContent = s;
+                strList.appendChild(li);
+            });
+
+            const priList = document.getElementById('intelSummaryPrioritiesList');
+            priList.innerHTML = '';
+            (summary.priority_improvements || []).forEach(p => {
+                const li = document.createElement('li');
+                li.textContent = p;
+                priList.appendChild(li);
+            });
+
+            // Keep history in sync with newly generated career reports
+            loadCareerHistory();
+        }
+
+        // ==========================================
+        // STEP 6: SQLITE CAREER HISTORY LOGIC
+        // ==========================================
+        let rawHistoryRecords = [];
+        let activeHistoryFilter = 'all';
+
+        function loadCareerHistory() {
+            const loading = document.getElementById('historyLoading');
+            const emptyState = document.getElementById('historyEmptyState');
+            const cardsGrid = document.getElementById('historyCardsGrid');
+
+            if (loading) loading.style.display = 'flex';
+
+            fetch('/api/history')
+                .then(res => res.json())
+                .then(data => {
+                    if (loading) loading.style.display = 'none';
+                    if (!data.success) {
+                        console.warn('Could not load history:', data.error);
+                        return;
+                    }
+
+                    // Update candidate session status bar
+                    if (data.candidate && data.candidate.candidate_name) {
+                        const nameEl = document.getElementById('sessionCandidateName');
+                        if (nameEl) nameEl.textContent = `Candidate: ${data.candidate.candidate_name}`;
+                    }
+
+                    rawHistoryRecords = data.history || [];
+                    updateHistoryCounts();
+                    renderHistoryCards();
+                })
+                .catch(err => {
+                    if (loading) loading.style.display = 'none';
+                    console.error('History fetch error:', err);
+                });
+        }
+
+        function updateHistoryCounts() {
+            const countAll = rawHistoryRecords.length;
+            const countResume = rawHistoryRecords.filter(r => r.record_type === 'resume_analysis').length;
+            const countInterview = rawHistoryRecords.filter(r => r.record_type === 'interview_session').length;
+            const countReport = rawHistoryRecords.filter(r => r.record_type === 'career_report').length;
+
+            const elAll = document.getElementById('countAll');
+            const elRes = document.getElementById('countResume');
+            const elInt = document.getElementById('countInterview');
+            const elRep = document.getElementById('countReport');
+
+            if (elAll) elAll.textContent = countAll;
+            if (elRes) elRes.textContent = countResume;
+            if (elInt) elInt.textContent = countInterview;
+            if (elRep) elRep.textContent = countReport;
+        }
+
+        function filterHistory(filterType, btnEl) {
+            activeHistoryFilter = filterType;
+            document.querySelectorAll('.hist-filter-btn').forEach(btn => btn.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            renderHistoryCards();
+        }
+
+        function renderHistoryCards() {
+            const emptyState = document.getElementById('historyEmptyState');
+            const cardsGrid = document.getElementById('historyCardsGrid');
+            if (!emptyState || !cardsGrid) return;
+
+            const filtered = activeHistoryFilter === 'all' 
+                ? rawHistoryRecords 
+                : rawHistoryRecords.filter(r => r.record_type === activeHistoryFilter);
+
+            if (filtered.length === 0) {
+                cardsGrid.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            cardsGrid.style.display = 'grid';
+            cardsGrid.innerHTML = '';
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card history-record-card';
+                card.innerHTML = `
+                    <div class="hist-card-top">
+                        <div class="hist-type-info">
+                            <span class="hist-icon">${item.icon || '📌'}</span>
+                            <div>
+                                <span class="hist-type-label ${escapeHtml(item.badge_class)}">${escapeHtml(item.type_label)}</span>
+                                <span class="hist-date">${escapeHtml(item.date_formatted)}</span>
+                            </div>
+                        </div>
+                        <span class="hist-metric-badge ${escapeHtml(item.badge_class)}">${escapeHtml(item.badge)}</span>
+                    </div>
+                    <h4 class="hist-title">${escapeHtml(item.title)}</h4>
+                    <p class="hist-sub">${escapeHtml(item.subtitle)}</p>
+                    <div class="hist-card-footer">
+                        <button type="button" class="btn-view-record" onclick="viewHistoryRecord('${escapeHtml(item.record_type)}', ${item.id})">
+                            <span>👁️ View Record</span>
+                        </button>
+                    </div>
+                `;
+                cardsGrid.appendChild(card);
+            });
+        }
+
+        function viewHistoryRecord(recordType, recordId) {
+            const modal = document.getElementById('historyDetailModal');
+            const modalBody = document.getElementById('modalBodyContent');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalIcon = document.getElementById('modalIcon');
+            const modalTime = document.getElementById('modalTimestamp');
+
+            if (!modal || !modalBody) return;
+
+            modal.style.display = 'flex';
+            modalBody.innerHTML = `
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <p>Fetching saved record from SQLite...</p>
+                </div>
+            `;
+
+            fetch(`/api/history/${recordType}/${recordId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success || !data.record) {
+                        modalBody.innerHTML = '<div class="alert alert-error">Failed to load record details.</div>';
+                        return;
+                    }
+
+                    const rec = data.record;
+                    modalTime.textContent = rec.date_formatted || 'Saved Activity';
+
+                    if (recordType === 'resume_analysis') {
+                        modalIcon.textContent = '📄';
+                        modalTitle.textContent = `Resume Scan: ${rec.resume_filename}`;
+                        renderResumeDetailModal(rec, modalBody);
+                    } else if (recordType === 'interview_session') {
+                        modalIcon.textContent = '🎯';
+                        modalTitle.textContent = `Interview Session: ${rec.target_role}`;
+                        renderInterviewDetailModal(rec, modalBody);
+                    } else if (recordType === 'career_report') {
+                        modalIcon.textContent = '📈';
+                        modalTitle.textContent = `Career Intelligence: ${rec.target_role}`;
+                        renderCareerDetailModal(rec, modalBody);
+                    }
+                })
+                .catch(err => {
+                    modalBody.innerHTML = '<div class="alert alert-error">Network error while loading record details.</div>';
+                    console.error(err);
+                });
+        }
+
+        function renderResumeDetailModal(rec, container) {
+            const techPills = (rec.technical_skills || []).map(s => `<span class="tag-pill tag-tech">${escapeHtml(s)}</span>`).join('');
+            const softPills = (rec.soft_skills || []).map(s => `<span class="tag-pill tag-soft">${escapeHtml(s)}</span>`).join('');
+            const missPills = (rec.missing_skills || []).map(s => `<span class="tag-pill tag-missing">➕ ${escapeHtml(s)}</span>`).join('');
+
+            const strengthsList = (rec.strengths || []).map(s => `<li>${escapeHtml(s)}</li>`).join('');
+            const improveList = (rec.resume_improvements || []).map(i => `<li>${escapeHtml(i)}</li>`).join('');
+
+            const rolesHtml = (rec.suggested_roles || []).map(r => `
+                <div class="detail-role-card">
+                    <div class="detail-role-header">
+                        <strong>${escapeHtml(r.title)}</strong>
+                        <span class="role-score-badge">${escapeHtml(r.match_score || '85%')}</span>
+                    </div>
+                    <p>${escapeHtml(r.reason || '')}</p>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="detail-modal-summary">
+                    <h4>${escapeHtml(rec.summary || 'Professional candidate summary.')}</h4>
+                    <p class="text-subtle">Saved from uploaded document: <strong>${escapeHtml(rec.resume_filename)}</strong></p>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5>Technical Competencies (${(rec.technical_skills || []).length})</h5>
+                    <div class="tags-container">${techPills || '<p class="empty-sub">None recorded.</p>'}</div>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5>Soft Skills & Attributes</h5>
+                    <div class="tags-container">${softPills || '<p class="empty-sub">None recorded.</p>'}</div>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5>Recommended Skill Additions</h5>
+                    <div class="tags-container">${missPills || '<p class="empty-sub">None recorded.</p>'}</div>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5>Suggested Target Roles</h5>
+                    <div class="detail-roles-stack">${rolesHtml || '<p class="empty-sub">None recorded.</p>'}</div>
+                </div>
+
+                <div class="detail-split-lists">
+                    <div class="detail-col">
+                        <h5>💪 Key Strengths</h5>
+                        <ul class="modal-bullet-list">${strengthsList || '<li>No strengths recorded.</li>'}</ul>
+                    </div>
+                    <div class="detail-col">
+                        <h5>🎯 Resume Improvement Tips</h5>
+                        <ul class="modal-bullet-list">${improveList || '<li>No suggestions recorded.</li>'}</ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderInterviewDetailModal(rec, container) {
+            const questions = rec.questions || [];
+            const answers = rec.answers || [];
+            const evals = rec.evaluations || [];
+
+            let qaItemsHtml = '';
+            for (let i = 0; i < questions.length; i++) {
+                const qText = questions[i] || `Question ${i + 1}`;
+                const aText = answers[i] || 'No answer provided.';
+                const ev = evals[i] || {};
+                const score = ev.score !== undefined ? ev.score : 'N/A';
+
+                qaItemsHtml += `
+                    <div class="hist-qa-card">
+                        <div class="hist-qa-head">
+                            <span class="hist-qa-qnum">Question ${i + 1}</span>
+                            <span class="hist-score-badge">${score} / 10</span>
+                        </div>
+                        <h5 class="hist-qa-prompt">${escapeHtml(qText)}</h5>
+                        <div class="hist-qa-answer">
+                            <strong>Candidate Answer:</strong>
+                            <p>${escapeHtml(aText)}</p>
+                        </div>
+                        <div class="hist-qa-feedback">
+                            <div><strong>Accuracy:</strong> ${escapeHtml(ev.technical_accuracy || 'Evaluated')}</div>
+                            <div><strong>Strengths:</strong> ${escapeHtml(ev.what_was_done_well || 'Sound knowledge')}</div>
+                            <div><strong>Improvement:</strong> ${escapeHtml(ev.what_could_be_improved || 'Add details')}</div>
+                        </div>
+                        ${ev.better_example_answer ? `
+                            <div class="hist-model-box">
+                                <strong>💡 Model 10/10 Answer:</strong>
+                                <p>${escapeHtml(ev.better_example_answer)}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="interview-detail-hero">
+                    <div>
+                        <h4>Target Role: ${escapeHtml(rec.target_role)}</h4>
+                        <p class="text-subtle">${questions.length} Questions Evaluated &bull; Saved to SQLite</p>
+                    </div>
+                    <div class="hist-hero-score">
+                        <span class="hist-hero-score-val">${rec.overall_score}</span>
+                        <span class="hist-hero-score-sub">/ 10 Score</span>
+                    </div>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5 style="margin-bottom: 1rem;">Complete Question & Answer Transcript</h5>
+                    <div class="hist-qa-stack">${qaItemsHtml || '<p class="empty-sub">No questions found in this session.</p>'}</div>
+                </div>
+            `;
+        }
+
+        function renderCareerDetailModal(rec, container) {
+            const gap = rec.skill_gap || {};
+            const matched = gap.matched_skills || [];
+            const missing = gap.missing_skills || [];
+            const roadmap = rec.learning_roadmap || [];
+            const projects = rec.recommended_projects || [];
+            const checklist = rec.resume_checklist || [];
+            const summary = rec.career_summary || {};
+
+            const matchedPills = matched.map(s => `<span class="tag-pill tag-tech">${escapeHtml(s)}</span>`).join('');
+            const missingPills = missing.map(s => `<span class="tag-pill tag-missing">${escapeHtml(s)}</span>`).join('');
+
+            const roadmapHtml = roadmap.map(st => `
+                <div class="hist-roadmap-step">
+                    <div class="hist-step-num">${st.step}</div>
+                    <div class="hist-step-content">
+                        <strong>${escapeHtml(st.title)}</strong>
+                        <span class="hist-step-time">${escapeHtml(st.timeframe)} &bull; ${escapeHtml(st.phase)}</span>
+                        <p>${escapeHtml(st.description)}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            const projHtml = projects.map(p => `
+                <div class="detail-role-card">
+                    <strong>${escapeHtml(p.title)}</strong>
+                    <div class="proj-tags">${(p.skills_practiced || []).map(s => `<span class="proj-tag">${escapeHtml(s)}</span>`).join('')}</div>
+                    <p>${escapeHtml(p.description)}</p>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="career-detail-hero">
+                    <div>
+                        <h4>Career Track: ${escapeHtml(rec.target_role)}</h4>
+                        <p class="text-subtle">${escapeHtml(summary.profile_summary || 'Target career roadmap and skill gap evaluation.')}</p>
+                    </div>
+                    <div class="hist-readiness-badge">
+                        <span class="hist-readiness-val">${rec.readiness_percentage}%</span>
+                        <span class="hist-readiness-sub">Readiness</span>
+                    </div>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5>Skill Alignment Breakdown</h5>
+                    <div class="gap-columns-split" style="margin-top: 0.5rem;">
+                        <div class="gap-col matched-col">
+                            <h6>✅ Matched Competencies (${matched.length})</h6>
+                            <div class="tags-container">${matchedPills || '<span class="empty-sub">None</span>'}</div>
+                        </div>
+                        <div class="gap-col missing-col">
+                            <h6>➕ Priority Gaps (${missing.length})</h6>
+                            <div class="tags-container">${missingPills || '<span class="empty-sub">None</span>'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5>5-Step Learning Roadmap</h5>
+                    <div class="hist-roadmap-stack">${roadmapHtml || '<p class="empty-sub">No roadmap steps found.</p>'}</div>
+                </div>
+
+                <div class="modal-section-group">
+                    <h5>Recommended Capstone Projects</h5>
+                    <div class="detail-roles-stack">${projHtml || '<p class="empty-sub">No projects found.</p>'}</div>
+                </div>
+            `;
+        }
+
+        function closeHistoryDetailModal() {
+            const modal = document.getElementById('historyDetailModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function openClearHistoryModal() {
+            const modal = document.getElementById('clearHistoryModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeClearHistoryModal() {
+            const modal = document.getElementById('clearHistoryModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function executeClearHistory() {
+            const btn = document.getElementById('confirmClearHistoryBtn');
+            if (btn) btn.disabled = true;
+
+            fetch('/api/history/clear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (btn) btn.disabled = false;
+                closeClearHistoryModal();
+                if (data.success) {
+                    loadCareerHistory();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to clear history.'));
+                }
+            })
+            .catch(err => {
+                if (btn) btn.disabled = false;
+                closeClearHistoryModal();
+                console.error(err);
+                alert('Network error while clearing history.');
+            });
+        }
+
+        // Close modals with Escape key
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeHistoryDetailModal();
+                closeClearHistoryModal();
+            }
+        });
+
+        // Initialize Career Intelligence & Career History on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCareerIntelligence('Python Developer');
+            loadCareerHistory();
+        });
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
