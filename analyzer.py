@@ -1439,3 +1439,449 @@ def generate_career_intelligence(role, resume_analysis=None, interview_summary=N
         'career_summary': career_summary,
         'source': 'smart_career_engine'
     }
+
+# ==========================================
+# STEP 9: JOB DESCRIPTION MATCHER FUNCTIONS
+# ==========================================
+
+def normalize_job_match(data, source='live_gemini'):
+    """
+    Ensure all required keys exist with safe defaults and standardized types.
+    """
+    if not isinstance(data, dict):
+        data = {}
+
+    raw_pct = data.get('match_score') if data.get('match_score') is not None else data.get('match_percentage', 50)
+    try:
+        match_pct = int(float(raw_pct))
+    except (ValueError, TypeError):
+        match_pct = 50
+    match_pct = max(0, min(100, match_pct))
+
+    tier = 'Strong Match' if match_pct >= 80 else ('Moderate Match' if match_pct >= 60 else 'Developing Match')
+    match_tier = str(data.get('match_tier') or tier).strip()
+
+    explanation = str(data.get('explanation') or data.get('match_explanation') or f'Profile compatibility evaluated at {match_pct}% based on verified skill overlap and requirement alignment.').strip()
+
+    raw_questions = data.get('interview_questions') or []
+    norm_questions = []
+    for q in raw_questions:
+        if isinstance(q, dict):
+            norm_questions.append({
+                'question': str(q.get('question') or '').strip(),
+                'type': str(q.get('type') or 'Technical').strip(),
+                'context': str(q.get('context') or '').strip(),
+                'why_it_matters': str(q.get('why_it_matters') or f'Evaluates critical competency for {data.get("job_title", "this role")}.').strip()
+            })
+        elif isinstance(q, str) and q.strip():
+            norm_questions.append({
+                'question': q.strip(),
+                'type': 'Technical',
+                'context': 'Role Competency',
+                'why_it_matters': 'Evaluates role-specific qualifications.'
+            })
+
+    raw_plan = data.get('preparation_plan') or []
+    norm_plan = []
+    for idx, p in enumerate(raw_plan):
+        if isinstance(p, dict):
+            action_desc = str(p.get('description') or p.get('action') or '').strip()
+            timeframe = str(p.get('timeframe') or f'Day {idx + 1}-{idx + 2}').strip()
+            norm_plan.append({
+                'step': int(p.get('step') or (idx + 1)),
+                'title': str(p.get('title') or f'Phase {idx + 1}').strip(),
+                'action': action_desc,
+                'description': action_desc,
+                'timeframe': timeframe
+            })
+        elif isinstance(p, str) and p.strip():
+            action_desc = p.strip()
+            norm_plan.append({
+                'step': idx + 1,
+                'title': f'Step {idx + 1}',
+                'action': action_desc,
+                'description': action_desc,
+                'timeframe': f'Day {idx + 1}-{idx + 2}'
+            })
+
+    return {
+        'job_title': str(data.get('job_title') or 'Target Job Role').strip(),
+        'match_score': match_pct,
+        'match_percentage': match_pct,
+        'match_tier': match_tier,
+        'explanation': explanation,
+        'match_explanation': explanation,
+        'matching_skills': [str(s).strip() for s in (data.get('matching_skills') or []) if str(s).strip()],
+        'missing_skills': [str(s).strip() for s in (data.get('missing_skills') or []) if str(s).strip()],
+        'relevant_strengths': [str(s).strip() for s in (data.get('relevant_strengths') or []) if str(s).strip()],
+        'resume_improvements': [str(s).strip() for s in (data.get('resume_improvements') or []) if str(s).strip()],
+        'learning_recommendations': [str(s).strip() for s in (data.get('learning_recommendations') or []) if str(s).strip()],
+        'interview_questions': norm_questions,
+        'preparation_plan': norm_plan,
+        'source': source
+    }
+
+def heuristic_job_description_match(resume_analysis, job_description):
+    """
+    Intelligent, deterministic heuristic comparison between an analyzed resume
+    and a pasted job description. Ensures 100% offline reliability.
+    """
+    if not isinstance(resume_analysis, dict):
+        resume_analysis = {}
+
+    jd_text = (job_description or '').strip()
+    jd_lower = jd_text.lower()
+
+    # 1. Detect Job Title from Job Description
+    detected_title = 'Target Role'
+    common_titles = [
+        'Python Developer', 'Software Engineer', 'Backend Developer', 'Frontend Developer',
+        'Full Stack Developer', 'Data Analyst', 'Data Scientist', 'Machine Learning Engineer',
+        'DevOps Engineer', 'Cloud Architect', 'Systems Engineer', 'Mobile Developer',
+        'Security Engineer', 'QA Automation Engineer', 'Database Administrator'
+    ]
+    for title in common_titles:
+        if title.lower() in jd_lower:
+            detected_title = title
+            break
+    if detected_title == 'Target Role':
+        # Check first line for title-like phrase
+        first_line = jd_text.splitlines()[0].strip() if jd_text.splitlines() else ''
+        clean_first = re.sub(r'[^a-zA-Z0-9\s/&-]', '', first_line).strip()
+        if 5 <= len(clean_first) <= 45:
+            detected_title = clean_first
+
+    # 2. Extract Candidate Skills & Context
+    cand_tech = [s.lower() for s in (resume_analysis.get('technical_skills') or [])]
+    cand_soft = [s.lower() for s in (resume_analysis.get('soft_skills') or [])]
+    cand_all_skills = set(cand_tech + cand_soft)
+
+    # Also collect resume projects and experience text
+    resume_context_words = set()
+    for proj in (resume_analysis.get('projects') or []):
+        if isinstance(proj, dict):
+            for t in proj.get('technologies') or []:
+                resume_context_words.add(str(t).lower())
+            resume_context_words.update(str(proj.get('description') or '').lower().split())
+    for exp in (resume_analysis.get('experience') or []):
+        if isinstance(exp, dict):
+            resume_context_words.update(str(exp.get('description') or '').lower().split())
+            resume_context_words.update(str(exp.get('role') or '').lower().split())
+
+    # 3. Detect Skills & Competencies in Job Description
+    known_skill_dictionary = [
+        'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C#', 'C', 'Ruby', 'Go', 'Rust', 'PHP', 'Swift', 'Kotlin',
+        'HTML', 'CSS', 'React', 'Angular', 'Vue.js', 'Next.js', 'Node.js', 'Express', 'Django', 'Flask', 'FastAPI', 'Spring Boot',
+        'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'SQLite', 'Firebase', 'GraphQL', 'REST APIs',
+        'Git', 'GitHub', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', 'Linux', 'CI/CD', 'Microservices',
+        'Machine Learning', 'Deep Learning', 'Pandas', 'NumPy', 'Scikit-learn', 'TensorFlow', 'PyTorch',
+        'Data Analysis', 'Tableau', 'Power BI', 'Kafka', 'Terraform', 'Unit Testing', 'PyTest',
+        'Agile', 'Scrum', 'Problem Solving', 'Communication', 'Teamwork', 'System Design'
+    ]
+
+    jd_matched_skills = []
+    jd_missing_skills = []
+
+    for skill in known_skill_dictionary:
+        skill_lower = skill.lower()
+        # Word boundary or exact substring check in JD
+        pattern = r'\b' + re.escape(skill_lower) + r'\b'
+        if re.search(pattern, jd_lower):
+            # Check if candidate has this skill
+            if skill_lower in cand_all_skills or skill_lower in resume_context_words or any(skill_lower in s for s in cand_all_skills):
+                if skill not in jd_matched_skills:
+                    jd_matched_skills.append(skill)
+            else:
+                if skill not in jd_missing_skills:
+                    jd_missing_skills.append(skill)
+
+    # Ensure we have at least standard defaults if JD text was short/unusual
+    if not jd_matched_skills and cand_tech:
+        # Give candidate credit for top matching tech if mentioned or inferred
+        jd_matched_skills = [s.title() for s in (resume_analysis.get('technical_skills') or [])[:3]]
+    if not jd_missing_skills:
+        jd_missing_skills = ['System Architecture', 'CI/CD Pipeline Automation', 'Production Cloud Monitoring']
+
+    # 4. Compute Realistic Match Percentage (0-100)
+    total_detected = len(jd_matched_skills) + len(jd_missing_skills)
+    if total_detected > 0:
+        ratio = len(jd_matched_skills) / total_detected
+        # Base scale between 35% and 90%
+        match_pct = int(ratio * 55 + 35)
+    else:
+        match_pct = 60
+    match_pct = max(20, min(92, match_pct))
+
+    match_explanation = (
+        f"Your resume matches {len(jd_matched_skills)} of {total_detected} primary competencies identified in this "
+        f"{detected_title} job description. Bridging {len(jd_missing_skills)} key requirement gaps will significantly "
+        "boost your interview callback rate."
+    )
+
+    # 5. Relevant Resume Strengths
+    strengths = []
+    projects = resume_analysis.get('projects') or []
+    if projects:
+        p0 = projects[0] if isinstance(projects[0], dict) else {'title': 'Featured Project'}
+        p0_title = p0.get('title', 'Featured Project')
+        p0_tech = ", ".join(p0.get('technologies', [])) if p0.get('technologies') else (jd_matched_skills[0] if jd_matched_skills else "Core Tech")
+        strengths.append(f"Demonstrated practical implementation through '{p0_title}' leveraging {p0_tech}.")
+    if jd_matched_skills:
+        strengths.append(f"Direct technical competency in {', '.join(jd_matched_skills[:3])}, aligning with job requirements.")
+    experience = resume_analysis.get('experience') or []
+    if experience:
+        e0 = experience[0] if isinstance(experience[0], dict) else {}
+        if e0.get('role'):
+            strengths.append(f"Relevant professional/academic background as {e0.get('role')} at {e0.get('company', 'organization')}.")
+    if not strengths:
+        strengths.append("Foundational technical problem solving and software engineering principles demonstrated across coursework.")
+
+    # 6. Actionable Resume Improvements
+    improvements = []
+    lead_match = jd_matched_skills[0] if jd_matched_skills else "primary technical skills"
+    lead_missing = jd_missing_skills[0] if jd_missing_skills else "cloud technologies"
+    improvements.append(f"Tailor your executive summary to explicitly highlight your experience with {lead_match} as emphasized in the job description.")
+    improvements.append(f"If you have completed academic or hands-on coursework in {lead_missing}, add relevant bullet points or tool tags to your skills matrix.")
+    improvements.append("Quantify your project achievements (e.g., performance optimizations, latency reduction, user scale) to demonstrate impact.")
+    improvements.append(f"Align section headers and bullet keywords with exact terms from this {detected_title} posting.")
+
+    # 7. Practical Learning Recommendations
+    learning = []
+    for miss in jd_missing_skills[:3]:
+        learning.append(f"Study core concepts of {miss}: complete targeted documentation walkthroughs and build a modular component or project demo.")
+    if len(learning) < 3:
+        learning.append("Review best practices for production unit testing, CI/CD automation, and clean code architecture.")
+
+    # 8. Role-Specific Interview Questions
+    interview_qs = [
+        {
+            'question': f"How have you applied {lead_match} in your recent projects, and what architectural decisions did you make?",
+            'type': 'Technical',
+            'context': f"Core {detected_title} Competency"
+        },
+        {
+            'question': f"This role requires familiarity with {lead_missing}. How would you ramp up and apply it effectively in our development environment?",
+            'type': 'Technical',
+            'context': "Requirement Gap Assessment"
+        },
+        {
+            'question': f"Tell us about a challenging technical trade-off you encountered when building a project, and how you resolved it.",
+            'type': 'Behavioral',
+            'context': "Problem Solving & Decision Making"
+        },
+        {
+            'question': f"How do you ensure test coverage, code reliability, and maintainability before deploying software to production?",
+            'type': 'Technical',
+            'context': "Engineering Standards & Quality"
+        }
+    ]
+
+    # 9. 5-Step Ordered Preparation Plan
+    prep_plan = [
+        {
+            'step': 1,
+            'title': f'Review {lead_missing} Fundamentals',
+            'action': f'Spend 2-3 hours understanding core concepts and terminology of {lead_missing} to speak confidently about it.'
+        },
+        {
+            'step': 2,
+            'title': f'Tailor Resume Highlights for {detected_title}',
+            'action': f'Update your resume summary and project bullet points to prioritize {lead_match} and matching technologies.'
+        },
+        {
+            'step': 3,
+            'title': 'Prepare STAR-Method Project Stories',
+            'action': 'Draft concise Situation-Task-Action-Result narratives for your top 2 resume projects with quantifiable results.'
+        },
+        {
+            'step': 4,
+            'title': 'Rehearse Technical & Behavioral Questions',
+            'action': 'Practice answering the job-specific interview questions in the CareerPilot AI Interview Coach to refine your delivery.'
+        },
+        {
+            'step': 5,
+            'title': 'Prepare Thoughtful Questions for the Interviewer',
+            'action': 'Draft 3 strategic questions about team architecture, development workflow, and immediate priorities for this position.'
+        }
+    ]
+
+    return normalize_job_match({
+        'job_title': detected_title,
+        'match_percentage': match_pct,
+        'match_explanation': match_explanation,
+        'matching_skills': jd_matched_skills,
+        'missing_skills': jd_missing_skills,
+        'relevant_strengths': strengths,
+        'resume_improvements': improvements,
+        'learning_recommendations': learning,
+        'interview_questions': interview_qs,
+        'preparation_plan': prep_plan,
+        'source': 'demo_fallback'
+    }, source='demo_fallback')
+
+def call_gemini_job_match(api_key, resume_analysis, job_description):
+    """
+    Call Google Gemini REST API to produce an in-depth, structured Job Match Report.
+    Uses safe retry, x-goog-api-key header authentication, and strict JSON output.
+    """
+    cand_name = resume_analysis.get('candidate_name', 'Candidate')
+    cand_summary = resume_analysis.get('summary', '')
+    cand_tech = ", ".join(resume_analysis.get('technical_skills', []))
+    cand_soft = ", ".join(resume_analysis.get('soft_skills', []))
+    
+    # Project summaries
+    proj_summaries = []
+    for p in (resume_analysis.get('projects') or []):
+        if isinstance(p, dict):
+            techs = ", ".join(p.get('technologies', []))
+            proj_summaries.append(f"- {p.get('title', 'Project')} ({techs}): {p.get('description', '')}")
+    projects_str = "\n".join(proj_summaries) if proj_summaries else "None specified"
+
+    # Experience summaries
+    exp_summaries = []
+    for e in (resume_analysis.get('experience') or []):
+        if isinstance(e, dict):
+            exp_summaries.append(f"- {e.get('role', 'Role')} at {e.get('company', 'Company')} ({e.get('duration', '')}): {e.get('description', '')}")
+    exp_str = "\n".join(exp_summaries) if exp_summaries else "None specified"
+
+    prompt = f"""You are an expert technical recruiter, hiring manager, and executive career coach.
+Compare the candidate's verified resume analysis with the provided job description.
+Produce a comprehensive, strictly objective, and structured JSON Job Match Report.
+
+IMPORTANT RULES:
+1. Base your evaluation strictly on information present in the resume and the job description.
+2. Do NOT invent or assume candidate qualifications, skills, or projects not present in the resume data.
+3. Calculate an honest, realistic match percentage (0-100 integer) reflecting skill and requirement overlap.
+4. Suggestions for improvements must tailor the candidate's ACTUAL experience.
+5. Provide actionable, role-specific interview preparation and a 5-step preparation plan.
+
+CANDIDATE PROFILE:
+Name: {cand_name}
+Summary: {cand_summary}
+Technical Skills: {cand_tech}
+Soft Skills: {cand_soft}
+Projects:
+{projects_str}
+Work Experience:
+{exp_str}
+
+JOB DESCRIPTION:
+\"\"\"
+{job_description}
+\"\"\"
+
+Return ONLY valid JSON matching this exact structure:
+{{
+  "job_title": "Detected job title (e.g. Full Stack Engineer)",
+  "match_percentage": 78,
+  "match_explanation": "2-3 sentences objectively explaining what the score represents and how the candidate compares to the job requirements.",
+  "matching_skills": ["Skill 1", "Skill 2"],
+  "missing_skills": ["Missing Skill / Requirement 1", "Missing Skill 2"],
+  "relevant_strengths": [
+    "Relevant resume highlight 1 connecting candidate project/experience to this role",
+    "Relevant resume highlight 2",
+    "Relevant resume highlight 3"
+  ],
+  "resume_improvements": [
+    "Specific tailoring suggestion 1 based on actual resume data",
+    "Specific tailoring suggestion 2",
+    "Specific tailoring suggestion 3"
+  ],
+  "learning_recommendations": [
+    "Practical topic/skill to study 1 to address missing requirements",
+    "Practical topic/skill 2",
+    "Practical topic/skill 3"
+  ],
+  "interview_questions": [
+    {{
+      "question": "Job-specific technical or behavioral question 1",
+      "type": "Technical",
+      "context": "Context or requirement being evaluated"
+    }},
+    {{
+      "question": "Job-specific technical or behavioral question 2",
+      "type": "Technical",
+      "context": "Context or requirement being evaluated"
+    }},
+    {{
+      "question": "Job-specific technical or behavioral question 3",
+      "type": "Behavioral",
+      "context": "Context or requirement being evaluated"
+    }},
+    {{
+      "question": "Job-specific question 4",
+      "type": "Technical",
+      "context": "Context or requirement being evaluated"
+    }}
+  ],
+  "preparation_plan": [
+    {{
+      "step": 1,
+      "title": "Actionable milestone title",
+      "action": "Concrete preparation action"
+    }},
+    {{
+      "step": 2,
+      "title": "Actionable milestone title",
+      "action": "Concrete preparation action"
+    }},
+    {{
+      "step": 3,
+      "title": "Actionable milestone title",
+      "action": "Concrete preparation action"
+    }},
+    {{
+      "step": 4,
+      "title": "Actionable milestone title",
+      "action": "Concrete preparation action"
+    }},
+    {{
+      "step": 5,
+      "title": "Actionable milestone title",
+      "action": "Concrete preparation action"
+    }}
+  ]
+}}
+"""
+
+    payload = {
+        'contents': [
+            {'parts': [{'text': prompt}]}
+        ],
+        'generationConfig': {
+            'responseMimeType': 'application/json'
+        }
+    }
+
+    res_data = post_gemini_request(payload, api_key, operation="job_description_match")
+    raw_text = res_data['candidates'][0]['content']['parts'][0]['text']
+    raw_text = re.sub(r'^```json\s*', '', raw_text.strip())
+    raw_text = re.sub(r'\s*```$', '', raw_text.strip())
+
+    parsed = json.loads(raw_text)
+    return normalize_job_match(parsed, source='live_gemini')
+
+def analyze_job_description(resume_analysis, job_description):
+    """
+    Main entry point for Job Description Matcher.
+    Compares candidate resume analysis against a pasted job description.
+    Tries live Google Gemini API first; falls back smoothly to smart offline heuristic.
+    """
+    if not job_description or not job_description.strip():
+        return {'error': 'Job description is empty. Please paste a job description to analyze.'}
+
+    if not resume_analysis or not isinstance(resume_analysis, dict):
+        return {'error': 'No analyzed resume found. Please upload and analyze your resume first.'}
+
+    api_key = get_gemini_api_key()
+    if api_key:
+        try:
+            return call_gemini_job_match(api_key, resume_analysis, job_description)
+        except Exception as e:
+            if not getattr(e, '_gemini_logged', False):
+                log_gemini_diagnostic(e, operation="job_description_match", attempt=1)
+            # Fall back safely to offline heuristic
+            return heuristic_job_description_match(resume_analysis, job_description)
+
+    return heuristic_job_description_match(resume_analysis, job_description)
+

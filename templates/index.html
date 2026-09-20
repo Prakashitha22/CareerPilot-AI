@@ -21,7 +21,8 @@
             </div>
             <nav class="nav-badges" aria-label="Main Navigation">
                 <a href="#uploadSection" class="nav-quick-link">📄 Resume Analyzer</a>
-                <a href="#interviewCoachSection" class="nav-quick-link">🎯 Interview Coach</a>
+                <a href="#jobMatcherSection" class="nav-quick-link">🎯 Job Matcher</a>
+                <a href="#interviewCoachSection" class="nav-quick-link">💬 Interview Coach</a>
                 <a href="#careerIntelligenceSection" class="nav-quick-link nav-intel-link">📈 Career Intelligence</a>
                 <a href="#careerHistorySection" class="nav-quick-link nav-history-link">📚 Career History</a>
                 <span class="tag tag-platform">🚀 AI Career Platform</span>
@@ -443,6 +444,209 @@
                             {% endif %}
                         </div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- STEP 9: JOB DESCRIPTION MATCHER SECTION                  -->
+        <!-- ======================================================== -->
+        <section id="jobMatcherSection" class="job-matcher-section">
+            <div class="section-title-row">
+                <div>
+                    <span class="badge-tag badge-job-match">Step 9 Feature</span>
+                    <h2>Job Description Matcher</h2>
+                    <p class="section-subtitle">Paste a target job posting to analyze skill alignment, uncover missing requirements, tailor your resume, and prepare for interviews.</p>
+                </div>
+                <div class="source-status" id="jobMatchSourceStatus">
+                    <span class="source-badge source-job-match">🎯 AI Role Compatibility</span>
+                </div>
+            </div>
+
+            <!-- Job Match Input Card -->
+            <div class="card job-match-input-card">
+                <div class="card-header">
+                    <div class="header-row">
+                        <div>
+                            <h3>Paste Target Job Description</h3>
+                            <p>Compare requirements directly against your analyzed resume to generate an actionable alignment report.</p>
+                        </div>
+                        <button type="button" class="btn-sample-jd" onclick="loadSampleJobDescription()">
+                            <span>📋 Load Sample Job Description</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Guidance banner if resume is not analyzed yet -->
+                <div id="jobMatchResumeAlert" class="notice-banner" style="display: none;">
+                    <span class="notice-icon">💡</span>
+                    <span>No analyzed resume detected yet. Please upload and analyze your resume above before matching against a job description.</span>
+                </div>
+
+                <div class="job-description-form">
+                    <div class="jd-textarea-wrap">
+                        <label for="jobDescriptionInput" class="input-label">Job Posting Content:</label>
+                        <textarea id="jobDescriptionInput" class="job-description-textarea" rows="7" placeholder="Paste the job description, required qualifications, key responsibilities, or technical requirements here..."></textarea>
+                        <div class="textarea-footer">
+                            <span class="word-counter" id="jdCharCounter">0 characters</span>
+                            <span class="textarea-hint">Minimum 20 characters recommended</span>
+                        </div>
+                    </div>
+
+                    <div class="job-match-actions-bar">
+                        <button type="button" class="btn-job-match" id="analyzeJobMatchBtn" onclick="submitJobMatch()">
+                            <span class="btn-sparkle">✨</span>
+                            <span>Analyze Job Match</span> &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading State Box -->
+                <div id="jobMatchLoadingBox" class="loading-box" style="display: none; margin-top: 1.5rem;">
+                    <div class="spinner"></div>
+                    <div class="loading-text">
+                        <h4>AI is analyzing job compatibility...</h4>
+                        <p id="jobMatchLoadingStatus">Parsing requirements, cross-referencing skills, and evaluating fit...</p>
+                    </div>
+                </div>
+
+                <!-- Error Notification Box -->
+                <div id="jobMatchErrorBox" class="alert alert-error" style="display: none; margin-top: 1.25rem;">
+                    <span class="alert-icon">✕</span>
+                    <span id="jobMatchErrorMsg">An error occurred during job matching.</span>
+                </div>
+            </div>
+
+            <!-- Job Match Results Display Area (Hidden by default) -->
+            <div id="jobMatchResultsCard" class="card job-match-results-card" style="display: none; margin-top: 1.75rem;">
+                <!-- Header with Overall Score & Match Gauge -->
+                <div class="job-match-hero">
+                    <div class="job-match-hero-meta">
+                        <span class="active-role-tag" id="jmJobTitle">Target Job Role</span>
+                        <div class="jm-source-pill" id="jmSourcePill">🟢 Google Gemini 3.6</div>
+                        <h3 class="jm-hero-heading">Role Compatibility Analysis</h3>
+                        <p class="jm-hero-sub" id="jmExplanation">Detailed alignment overview based on resume qualifications and job description expectations.</p>
+                    </div>
+                    <div class="jm-score-box">
+                        <div class="jm-score-circle">
+                            <span class="jm-score-val" id="jmScoreVal">82%</span>
+                            <span class="jm-score-sub">Match</span>
+                        </div>
+                        <span class="jm-score-tier" id="jmScoreTier">Strong Match</span>
+                    </div>
+                </div>
+
+                <!-- Skills Alignment: Matched vs Missing (2 Columns) -->
+                <div class="gap-columns-split" style="margin-top: 1.5rem;">
+                    <div class="gap-col matched-col">
+                        <h4>✅ Matching Skills (<span id="jmMatchedCount">0</span>)</h4>
+                        <p class="col-subtext">Competencies found in both your resume and this job posting</p>
+                        <div class="tags-container" id="jmMatchedSkillsList">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <div class="gap-col missing-col">
+                        <h4>➕ Missing / Required Skills (<span id="jmMissingCount">0</span>)</h4>
+                        <p class="col-subtext">Important requirements mentioned in posting not evident in resume</p>
+                        <div class="tags-container" id="jmMissingSkillsList">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relevant Resume Strengths & Resume Improvements Split -->
+                <div class="insights-grid" style="margin-top: 1.5rem;">
+                    <!-- Relevant Resume Strengths -->
+                    <div class="card insights-card">
+                        <div class="card-header">
+                            <div class="header-icon-title">
+                                <span class="insight-icon icon-strength">💪</span>
+                                <div>
+                                    <h3>Relevant Resume Strengths</h3>
+                                    <p>Projects, experience &amp; skills that make you competitive</p>
+                                </div>
+                            </div>
+                        </div>
+                        <ul class="insight-list" id="jmStrengthsList">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+
+                    <!-- Tailored Resume Improvements -->
+                    <div class="card insights-card">
+                        <div class="card-header">
+                            <div class="header-icon-title">
+                                <span class="insight-icon icon-improve">📝</span>
+                                <div>
+                                    <h3>Resume Tailoring Suggestions</h3>
+                                    <p>Specific adjustments to align with this job posting</p>
+                                </div>
+                            </div>
+                        </div>
+                        <ul class="insight-list improvement-list" id="jmImprovementsList">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Practical Learning Recommendations -->
+                <div class="card jm-learning-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div class="header-icon-title">
+                            <span class="insight-icon icon-learning">📚</span>
+                            <div>
+                                <h3>Targeted Learning Recommendations</h3>
+                                <p>Practical topics to study to bridge priority requirement gaps</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="summary-points-list list-priority" id="jmLearningList">
+                        <!-- Populated dynamically -->
+                    </ul>
+                </div>
+
+                <!-- Interview Preparation Questions -->
+                <div class="card jm-interview-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div class="header-row">
+                            <div class="header-icon-title">
+                                <span class="insight-icon icon-roles">🎯</span>
+                                <div>
+                                    <h3>Job-Specific Interview Questions</h3>
+                                    <p>Questions tailored specifically to this job posting and your resume</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-practice-in-coach" id="jmPracticeCoachBtn" onclick="launchInterviewFromJobMatch()">
+                                <span>Practice in Interview Coach &rarr;</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="jm-questions-stack" id="jmQuestionsList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- 5-Step Ordered Preparation Plan -->
+                <div class="card jm-plan-card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div class="header-icon-title">
+                            <span class="insight-icon icon-checklist">🗺️</span>
+                            <div>
+                                <h3>5-Step Job Preparation Plan</h3>
+                                <p>Ordered sequential roadmap to maximize your chances of securing an interview</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="roadmap-timeline" id="jmPlanTimeline">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Action row -->
+                <div class="jm-bottom-actions" style="margin-top: 1.5rem; text-align: center;">
+                    <button type="button" class="btn-secondary" onclick="resetJobMatchInput()">
+                        <span>🔄 Compare Another Job Description</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -1016,7 +1220,8 @@
                 <h4 class="footer-heading">Platform Features</h4>
                 <ul class="footer-links">
                     <li><a href="#uploadSection">📄 Resume Analyzer</a></li>
-                    <li><a href="#interviewCoachSection">🎯 AI Interview Coach</a></li>
+                    <li><a href="#jobMatcherSection">🎯 Job Matcher</a></li>
+                    <li><a href="#interviewCoachSection">💬 AI Interview Coach</a></li>
                     <li><a href="#careerIntelligenceSection">📈 Career Intelligence</a></li>
                     <li><a href="#careerHistorySection">📚 Career History</a></li>
                 </ul>
@@ -1042,8 +1247,15 @@
     </footer>
 
     <script>
-        // Global state for unifying Step 2, Step 3, and Step 4
+        // Global state for unifying Step 2, Step 3, Step 4, and Step 9
         let latestResumeAnalysis = null;
+        {% if analysis %}
+        try {
+            latestResumeAnalysis = {{ analysis | tojson }};
+        } catch(e) {
+            console.error('Could not initialize latestResumeAnalysis from template:', e);
+        }
+        {% endif %}
         let latestInterviewSummary = null;
         let currentIntelRole = 'Python Developer';
 
@@ -2201,6 +2413,368 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        // ==========================================
+        // STEP 9: JOB DESCRIPTION MATCHER LOGIC
+        // ==========================================
+        const jdInputEl = document.getElementById('jobDescriptionInput');
+        const jdCharCounterEl = document.getElementById('jdCharCounter');
+
+        if (jdInputEl && jdCharCounterEl) {
+            jdInputEl.addEventListener('input', function() {
+                const len = this.value.length;
+                const words = this.value.trim() ? this.value.trim().split(/\s+/).length : 0;
+                jdCharCounterEl.textContent = `${len.toLocaleString()} characters (${words} words)`;
+            });
+        }
+
+        function loadSampleJobDescription() {
+            const sampleJD = `Job Title: Senior Backend / Python Software Engineer
+Company: Apex Cloud Systems
+Location: Remote / Hybrid
+
+Role Overview:
+We are seeking an experienced and passionate Python / Backend Software Engineer to design, develop, and scale mission-critical backend microservices, high-throughput RESTful APIs, and data ingestion pipelines. You will collaborate closely with product managers, frontend engineers, and DevOps teams to deliver resilient, cloud-native services.
+
+Key Responsibilities:
+- Design, build, and maintain production backend microservices using Python (FastAPI, Flask, or Django).
+- Architect clean, well-documented REST APIs and implement robust authentication & authorization workflows.
+- Design and optimize relational database schemas (PostgreSQL, MySQL) and caching architectures (Redis).
+- Containerize application components with Docker and support deployments across AWS cloud infrastructure with Kubernetes.
+- Write thorough unit tests, integration tests, and uphold high code quality through continuous integration (CI/CD).
+- Participate in Agile sprint planning, technical design reviews, and collaborative pair programming.
+
+Required Skills & Qualifications:
+- 2+ years of professional backend software development experience in Python.
+- Strong practical knowledge of modern web frameworks (Flask, FastAPI, or Django).
+- Proficiency with SQL, relational database modeling (PostgreSQL / MySQL), and query optimization.
+- Familiarity with containerization (Docker) and cloud deployments (AWS, GCP, or Azure).
+- Solid grasp of Git version control, RESTful API design patterns, and CI/CD pipelines.
+- Experience writing automated unit and integration tests (pytest, unittest).
+- Strong problem-solving abilities, clean coding practices, and effective communication skills.`;
+
+            if (jdInputEl) {
+                jdInputEl.value = sampleJD;
+                if (jdCharCounterEl) {
+                    const len = sampleJD.length;
+                    const words = sampleJD.trim().split(/\s+/).length;
+                    jdCharCounterEl.textContent = `${len.toLocaleString()} characters (${words} words)`;
+                }
+            }
+        }
+
+        let jobMatchStatusInterval = null;
+
+        function submitJobMatch() {
+            const resumeAlert = document.getElementById('jobMatchResumeAlert');
+            const errorBox = document.getElementById('jobMatchErrorBox');
+            const errorMsg = document.getElementById('jobMatchErrorMsg');
+            const loadingBox = document.getElementById('jobMatchLoadingBox');
+            const resultsCard = document.getElementById('jobMatchResultsCard');
+            const analyzeBtn = document.getElementById('analyzeJobMatchBtn');
+            const loadingStatus = document.getElementById('jobMatchLoadingStatus');
+
+            // Hide previous errors / results
+            if (errorBox) errorBox.style.display = 'none';
+            if (resumeAlert) resumeAlert.style.display = 'none';
+
+            // Check if resume is analyzed
+            if (!latestResumeAnalysis || !latestResumeAnalysis.technical_skills || latestResumeAnalysis.technical_skills.length === 0) {
+                if (resumeAlert) {
+                    resumeAlert.style.display = 'flex';
+                    resumeAlert.scrollIntoView({ behavior: 'smooth' });
+                } else if (errorBox) {
+                    errorMsg.textContent = 'Please upload and analyze your resume first before running the Job Description Matcher.';
+                    errorBox.style.display = 'flex';
+                }
+                return;
+            }
+
+            const jdText = jdInputEl ? jdInputEl.value.trim() : '';
+            if (!jdText || jdText.length < 20) {
+                if (errorBox && errorMsg) {
+                    errorMsg.textContent = 'Please enter a more detailed job description (minimum 20 characters) to get an accurate match.';
+                    errorBox.style.display = 'flex';
+                }
+                return;
+            }
+
+            if (analyzeBtn) {
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '<span>⏳ Analyzing Match...</span>';
+            }
+            if (resultsCard) resultsCard.style.display = 'none';
+            if (loadingBox) loadingBox.style.display = 'flex';
+
+            const statusMsgs = [
+                'Parsing job description requirements and responsibilities...',
+                'Cross-referencing candidate technical skills and experience...',
+                'Calculating skill match percentage and identifying gaps...',
+                'Generating tailored resume improvements and interview questions...',
+                'Constructing your 5-step preparation roadmap...'
+            ];
+            let sIdx = 0;
+            if (loadingStatus) loadingStatus.textContent = statusMsgs[0];
+            clearInterval(jobMatchStatusInterval);
+            jobMatchStatusInterval = setInterval(() => {
+                sIdx = (sIdx + 1) % statusMsgs.length;
+                if (loadingStatus) loadingStatus.textContent = statusMsgs[sIdx];
+            }, 1200);
+
+            fetch('/job-match', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    resume_analysis: latestResumeAnalysis,
+                    job_description: jdText
+                })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(errData => {
+                        throw new Error(errData.error || `Server responded with status ${res.status}`);
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                clearInterval(jobMatchStatusInterval);
+                if (loadingBox) loadingBox.style.display = 'none';
+                if (analyzeBtn) {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '<span class="btn-sparkle">✨</span> <span>Analyze Job Match</span> &rarr;';
+                }
+
+                if (data.error) {
+                    if (errorBox && errorMsg) {
+                        errorMsg.textContent = data.error;
+                        errorBox.style.display = 'flex';
+                    }
+                    return;
+                }
+
+                renderJobMatchResults(data);
+                if (resultsCard) {
+                    resultsCard.style.display = 'block';
+                    resultsCard.scrollIntoView({ behavior: 'smooth' });
+                }
+            })
+            .catch(err => {
+                clearInterval(jobMatchStatusInterval);
+                if (loadingBox) loadingBox.style.display = 'none';
+                if (analyzeBtn) {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '<span class="btn-sparkle">✨</span> <span>Analyze Job Match</span> &rarr;';
+                }
+                if (errorBox && errorMsg) {
+                    errorMsg.textContent = err.message || 'An unexpected error occurred while analyzing the job match. Please try again.';
+                    errorBox.style.display = 'flex';
+                }
+                console.error('Job match error:', err);
+            });
+        }
+
+        function renderJobMatchResults(data) {
+            // Source badge
+            const sourcePill = document.getElementById('jmSourcePill');
+            if (sourcePill) {
+                if (data.source === 'live_gemini') {
+                    sourcePill.textContent = '🟢 Google Gemini 3.6';
+                    sourcePill.className = 'jm-source-pill source-live';
+                } else {
+                    sourcePill.textContent = '⚡ Smart Heuristic Matcher';
+                    sourcePill.className = 'jm-source-pill source-demo';
+                }
+            }
+
+            // Job Title
+            const titleEl = document.getElementById('jmJobTitle');
+            if (titleEl) titleEl.textContent = data.job_title || 'Target Job Role';
+
+            // Score & Tier
+            const score = typeof data.match_score === 'number' ? data.match_score : 75;
+            const scoreValEl = document.getElementById('jmScoreVal');
+            if (scoreValEl) scoreValEl.textContent = `${score}%`;
+
+            const tierEl = document.getElementById('jmScoreTier');
+            if (tierEl) {
+                const tier = data.match_tier || (score >= 80 ? 'Strong Match' : score >= 60 ? 'Moderate Match' : 'Developing Match');
+                tierEl.textContent = tier;
+                if (score >= 80) {
+                    tierEl.className = 'jm-score-tier tier-high';
+                } else if (score >= 60) {
+                    tierEl.className = 'jm-score-tier tier-medium';
+                } else {
+                    tierEl.className = 'jm-score-tier tier-dev';
+                }
+            }
+
+            // Explanation
+            const expEl = document.getElementById('jmExplanation');
+            if (expEl) expEl.textContent = data.explanation || 'Detailed role compatibility evaluation based on resume alignment.';
+
+            // Matching Skills
+            const matchedSkills = data.matching_skills || [];
+            const matchedCountEl = document.getElementById('jmMatchedCount');
+            if (matchedCountEl) matchedCountEl.textContent = matchedSkills.length;
+            const matchedListEl = document.getElementById('jmMatchedSkillsList');
+            if (matchedListEl) {
+                matchedListEl.innerHTML = '';
+                if (matchedSkills.length > 0) {
+                    matchedSkills.forEach(skill => {
+                        const span = document.createElement('span');
+                        span.className = 'tag-pill tag-tech';
+                        span.textContent = `✓ ${skill}`;
+                        matchedListEl.appendChild(span);
+                    });
+                } else {
+                    matchedListEl.innerHTML = '<span class="empty-sub">No direct skill matches detected.</span>';
+                }
+            }
+
+            // Missing Skills
+            const missingSkills = data.missing_skills || [];
+            const missingCountEl = document.getElementById('jmMissingCount');
+            if (missingCountEl) missingCountEl.textContent = missingSkills.length;
+            const missingListEl = document.getElementById('jmMissingSkillsList');
+            if (missingListEl) {
+                missingListEl.innerHTML = '';
+                if (missingSkills.length > 0) {
+                    missingSkills.forEach(skill => {
+                        const span = document.createElement('span');
+                        span.className = 'tag-pill tag-missing';
+                        span.textContent = `➕ ${skill}`;
+                        missingListEl.appendChild(span);
+                    });
+                } else {
+                    missingListEl.innerHTML = '<span class="tag-pill tag-tech" style="background: rgba(16,185,129,0.15); color: #34d399;">✓ All detected requirements covered!</span>';
+                }
+            }
+
+            // Relevant Resume Strengths
+            const strengthsListEl = document.getElementById('jmStrengthsList');
+            if (strengthsListEl) {
+                strengthsListEl.innerHTML = '';
+                const strengths = data.relevant_strengths || [];
+                if (strengths.length > 0) {
+                    strengths.forEach(s => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span class="check-icon">✓</span><span>${escapeHtml(s)}</span>`;
+                        strengthsListEl.appendChild(li);
+                    });
+                } else {
+                    strengthsListEl.innerHTML = '<li><span>Core programming fundamentals align with technical requirements.</span></li>';
+                }
+            }
+
+            // Tailored Resume Improvements
+            const improvementsListEl = document.getElementById('jmImprovementsList');
+            if (improvementsListEl) {
+                improvementsListEl.innerHTML = '';
+                const improvements = data.resume_improvements || [];
+                if (improvements.length > 0) {
+                    improvements.forEach(imp => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span class="bullet-icon">⚡</span><span>${escapeHtml(imp)}</span>`;
+                        improvementsListEl.appendChild(li);
+                    });
+                } else {
+                    improvementsListEl.innerHTML = '<li><span>Highlight project metrics and relevant technical keywords from the job description.</span></li>';
+                }
+            }
+
+            // Practical Learning Recommendations
+            const learningListEl = document.getElementById('jmLearningList');
+            if (learningListEl) {
+                learningListEl.innerHTML = '';
+                const learning = data.learning_recommendations || [];
+                if (learning.length > 0) {
+                    learning.forEach(rec => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span class="bullet-icon">📚</span><span>${escapeHtml(rec)}</span>`;
+                        learningListEl.appendChild(li);
+                    });
+                } else {
+                    learningListEl.innerHTML = '<li><span>Review core system architecture and production deployment workflows.</span></li>';
+                }
+            }
+
+            // Interview Preparation Questions
+            const questionsListEl = document.getElementById('jmQuestionsList');
+            if (questionsListEl) {
+                questionsListEl.innerHTML = '';
+                const questions = data.interview_questions || [];
+                if (questions.length > 0) {
+                    questions.forEach((q, idx) => {
+                        const item = document.createElement('div');
+                        item.className = 'jm-question-item';
+                        const typeBadgeClass = (q.type && q.type.toLowerCase() === 'behavioral') ? 'badge-behavioral' : 'badge-technical';
+                        item.innerHTML = `
+                            <div class="jm-q-head">
+                                <span class="jm-q-num">Q${idx + 1}</span>
+                                <span class="badge-tag ${typeBadgeClass}">${escapeHtml(q.type || 'Technical')}</span>
+                                ${q.context ? `<span class="jm-q-context">${escapeHtml(q.context)}</span>` : ''}
+                            </div>
+                            <h4 class="jm-q-prompt">${escapeHtml(q.question)}</h4>
+                            ${q.why_it_matters ? `
+                                <p class="jm-q-why"><strong>🎯 Why it matters:</strong> ${escapeHtml(q.why_it_matters)}</p>
+                            ` : ''}
+                        `;
+                        questionsListEl.appendChild(item);
+                    });
+                } else {
+                    questionsListEl.innerHTML = '<p class="empty-sub">No interview questions generated.</p>';
+                }
+            }
+
+            // 5-Step Ordered Preparation Plan
+            const planTimelineEl = document.getElementById('jmPlanTimeline');
+            if (planTimelineEl) {
+                planTimelineEl.innerHTML = '';
+                const planSteps = data.preparation_plan || [];
+                if (planSteps.length > 0) {
+                    planSteps.forEach(st => {
+                        const stepDiv = document.createElement('div');
+                        stepDiv.className = 'roadmap-step-item';
+                        stepDiv.innerHTML = `
+                            <div class="roadmap-step-circle">${escapeHtml(String(st.step || '•'))}</div>
+                            <div class="roadmap-step-body">
+                                <div class="roadmap-step-header">
+                                    <h4 class="roadmap-step-title">${escapeHtml(st.title || '')}</h4>
+                                    ${st.timeframe ? `<span class="roadmap-step-time">${escapeHtml(st.timeframe)}</span>` : ''}
+                                </div>
+                                <p class="roadmap-step-desc">${escapeHtml(st.description || '')}</p>
+                            </div>
+                        `;
+                        planTimelineEl.appendChild(stepDiv);
+                    });
+                } else {
+                    planTimelineEl.innerHTML = '<p class="empty-sub">No preparation steps generated.</p>';
+                }
+            }
+        }
+
+        function launchInterviewFromJobMatch() {
+            const titleEl = document.getElementById('jmJobTitle');
+            const jobTitle = (titleEl && titleEl.textContent.trim()) ? titleEl.textContent.trim() : 'Python Developer';
+            selectRoleForInterview(jobTitle);
+        }
+
+        function resetJobMatchInput() {
+            if (jdInputEl) {
+                jdInputEl.value = '';
+                if (jdCharCounterEl) jdCharCounterEl.textContent = '0 characters';
+            }
+            const resultsCard = document.getElementById('jobMatchResultsCard');
+            if (resultsCard) resultsCard.style.display = 'none';
+            const errorBox = document.getElementById('jobMatchErrorBox');
+            if (errorBox) errorBox.style.display = 'none';
+            const alertBox = document.getElementById('jobMatchResumeAlert');
+            if (alertBox) alertBox.style.display = 'none';
+
+            const section = document.getElementById('jobMatcherSection');
+            if (section) section.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>

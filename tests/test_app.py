@@ -3,6 +3,7 @@ import io
 import unittest
 import sqlite3
 import requests
+import json
 from pypdf import PdfWriter
 from unittest.mock import patch, MagicMock
 from app import app
@@ -894,6 +895,218 @@ class CareerPilotTestCase(unittest.TestCase):
             self.assertNotIn(unique_secret_key, log_output)
             # Ensure it was sanitized
             self.assertIn("[REDACTED", log_output)
+
+    # ==========================================
+    # 9. STEP 9: JOB DESCRIPTION MATCHER TESTS
+    # ==========================================
+
+    def test_job_match_missing_resume_analysis(self):
+        """Verify /job-match returns 400 when resume_analysis is missing or empty."""
+        response = self.client.post('/job-match', json={
+            'resume_analysis': {},
+            'job_description': 'Looking for a Python developer with Django and PostgreSQL experience.'
+        })
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertIn('error', data)
+        self.assertIn('resume', data['error'].lower())
+
+    def test_job_match_empty_description(self):
+        """Verify /job-match returns 400 when job_description is too short or empty."""
+        response = self.client.post('/job-match', json={
+            'resume_analysis': {'technical_skills': ['Python', 'Flask']},
+            'job_description': 'Too short'
+        })
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertIn('error', data)
+
+    def test_job_match_oversized_description(self):
+        """Verify /job-match returns 400 when job_description exceeds character limit."""
+        response = self.client.post('/job-match', json={
+            'resume_analysis': {'technical_skills': ['Python', 'Flask']},
+            'job_description': 'Python ' * 5000  # 35,000 characters
+        })
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertIn('error', data)
+        self.assertIn('exceeds', data['error'].lower())
+
+    def test_job_match_heuristic_offline_success(self):
+        """Verify /job-match executes full heuristic matching when offline and returns all 8 required parts."""
+        payload = {
+            'resume_analysis': {
+                'candidate_name': 'Alex Johnson',
+                'summary': 'Full Stack Developer with Python and Flask experience.',
+                'technical_skills': ['Python', 'Flask', 'SQL', 'Git', 'HTML', 'CSS', 'JavaScript'],
+                'strengths': ['Solid Python backend fundamentals'],
+                'projects': [{'title': 'Task Manager', 'technologies': ['Python', 'Flask', 'SQLite']}],
+                'experience': [{'role': 'Junior Developer', 'company': 'Tech Corp', 'duration': '2022-2024'}]
+            },
+            'job_description': """Job Title: Senior Backend / Python Software Engineer
+Company: Apex Cloud Systems
+Responsibilities:
+- Build scalable backend microservices using Python and Flask.
+- Manage relational databases with PostgreSQL and Docker container deployments.
+- Write unit tests and maintain CI/CD pipelines.
+Requirements: Python, Flask, PostgreSQL, Docker, Kubernetes, AWS, Git, Unit Testing."""
+        }
+        with patch('analyzer.get_gemini_api_key', return_value=None):
+            response = self.client.post('/job-match', json=payload)
+            self.assertEqual(response.status_code, 200)
+            data = response.get_json()
+
+            # Verify 8 core requirements
+            # 1. Match score & tier & explanation
+            self.assertIn('match_score', data)
+            self.assertIsInstance(data['match_score'], int)
+            self.assertGreaterEqual(data['match_score'], 0)
+            self.assertLessEqual(data['match_score'], 100)
+            self.assertIn('match_tier', data)
+            self.assertIn('explanation', data)
+
+            # 2. Matching skills
+            self.assertIn('matching_skills', data)
+            self.assertIsInstance(data['matching_skills'], list)
+            self.assertTrue(any('Python' in s for s in data['matching_skills']))
+
+            # 3. Missing skills
+            self.assertIn('missing_skills', data)
+            self.assertIsInstance(data['missing_skills'], list)
+            self.assertTrue(any(s in ['PostgreSQL', 'Docker', 'Kubernetes', 'AWS'] for s in data['missing_skills']))
+
+            # 4. Relevant resume strengths
+            self.assertIn('relevant_strengths', data)
+            self.assertIsInstance(data['relevant_strengths'], list)
+            self.assertTrue(len(data['relevant_strengths']) >= 1)
+
+            # 5. Specific resume improvements
+            self.assertIn('resume_improvements', data)
+            self.assertIsInstance(data['resume_improvements'], list)
+            self.assertTrue(len(data['resume_improvements']) >= 1)
+
+            # 6. Practical learning recommendations
+            self.assertIn('learning_recommendations', data)
+            self.assertIsInstance(data['learning_recommendations'], list)
+            self.assertTrue(len(data['learning_recommendations']) >= 1)
+
+            # 7. Role-specific interview questions
+            self.assertIn('interview_questions', data)
+            self.assertIsInstance(data['interview_questions'], list)
+            self.assertTrue(len(data['interview_questions']) >= 3)
+            for q in data['interview_questions']:
+                self.assertIn('question', q)
+                self.assertIn('type', q)
+                self.assertIn('context', q)
+                self.assertIn('why_it_matters', q)
+
+            # 8. 5-step ordered preparation plan
+            self.assertIn('preparation_plan', data)
+            self.assertIsInstance(data['preparation_plan'], list)
+            self.assertEqual(len(data['preparation_plan']), 5)
+            for step in data['preparation_plan']:
+                self.assertIn('step', step)
+                self.assertIn('title', step)
+                self.assertIn('timeframe', step)
+                self.assertIn('description', step)
+
+            # Source fallback
+            self.assertEqual(data.get('source'), 'demo_fallback')
+
+    def test_job_match_gemini_success(self):
+        """Verify analyze_job_description uses x-goog-api-key header and parses Gemini JSON correctly."""
+        fake_key = "AIzaSySecretApiKeyHeaderTestJobMatch"
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "candidates": [{
+                "content": {
+                    "parts": [{
+                        "text": json.dumps({
+                            "job_title": "Senior Python Backend Engineer",
+                            "match_score": 85,
+                            "match_tier": "Strong Match",
+                            "explanation": "Strong alignment with Python and Flask.",
+                            "matching_skills": ["Python", "Flask", "Git"],
+                            "missing_skills": ["Docker", "Kubernetes"],
+                            "relevant_strengths": ["Demonstrated backend development with Flask."],
+                            "resume_improvements": ["Highlight Docker and container experience."],
+                            "learning_recommendations": ["Learn Docker basics and Kubernetes pod architectures."],
+                            "interview_questions": [
+                                {
+                                    "question": "How do you structure microservices in Flask?",
+                                    "type": "Technical",
+                                    "context": "Flask & Microservices",
+                                    "why_it_matters": "Key requirement for the role."
+                                }
+                            ],
+                            "preparation_plan": [
+                                {
+                                    "step": 1,
+                                    "title": "Resume Keyword Optimization",
+                                    "timeframe": "Day 1-2",
+                                    "description": "Align experience section with job description terms."
+                                }
+                            ]
+                        })
+                    }]
+                }
+            }]
+        }
+
+        with patch('analyzer.get_gemini_api_key', return_value=fake_key), \
+             patch('requests.post', return_value=mock_response) as mock_post:
+            resume_data = {'technical_skills': ['Python', 'Flask', 'Git']}
+            jd_text = "Job description for Senior Python Backend Engineer requiring Docker."
+            result = analyzer.analyze_job_description(resume_data, jd_text)
+
+            self.assertTrue(mock_post.called)
+            called_url = mock_post.call_args[0][0]
+            called_headers = mock_post.call_args[1].get('headers', {})
+            self.assertNotIn("?key=", called_url)
+            self.assertNotIn(fake_key, called_url)
+            self.assertEqual(called_headers.get('x-goog-api-key'), fake_key)
+            self.assertEqual(result.get('source'), 'live_gemini')
+            self.assertEqual(result.get('match_score'), 85)
+            self.assertEqual(result.get('job_title'), "Senior Python Backend Engineer")
+            self.assertEqual(len(result.get('matching_skills', [])), 3)
+
+    def test_job_match_gemini_failure_graceful_fallback(self):
+        """Verify analyze_job_description safely logs diagnostic and falls back to heuristic when Gemini fails."""
+        fake_key = "AIzaSySecretApiKeyHeaderTestJobMatch"
+        mock_503 = MagicMock()
+        mock_503.status_code = 503
+        mock_503.json.return_value = {"error": {"code": 503, "message": "High demand temporary spike"}}
+        mock_503.raise_for_status.side_effect = requests.exceptions.HTTPError("503 Service Unavailable", response=mock_503)
+
+        with patch('analyzer.get_gemini_api_key', return_value=fake_key), \
+             patch('requests.post', side_effect=[mock_503, mock_503, mock_503]), \
+             patch('time.sleep'), \
+             patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+            resume_data = {'technical_skills': ['Python', 'Flask', 'Git']}
+            jd_text = "Job description for Python Engineer requiring Docker and Kubernetes."
+            result = analyzer.analyze_job_description(resume_data, jd_text)
+
+            # Verified fallback
+            self.assertEqual(result.get('source'), 'demo_fallback')
+            self.assertIn('match_score', result)
+            self.assertIsInstance(result['match_score'], int)
+            self.assertTrue(len(result.get('matching_skills', [])) > 0)
+            self.assertEqual(len(result.get('preparation_plan', [])), 5)
+
+            # Verified safe logging without key leak
+            log_output = mock_stderr.getvalue()
+            self.assertNotIn(fake_key, log_output)
+            self.assertIn("Operation: job_description_match", log_output)
+
+    def test_homepage_has_job_matcher(self):
+        """Verify the homepage renders the Job Description Matcher section."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("jobMatcherSection", html)
+        self.assertIn("Job Description Matcher", html)
+        self.assertIn("Paste Target Job Description", html)
 
 if __name__ == '__main__':
     unittest.main()

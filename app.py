@@ -243,6 +243,64 @@ def analyze():
         return redirect('/')
 
 # ==========================================
+# STEP 9 ROUTES: JOB DESCRIPTION MATCHER
+# ==========================================
+
+@app.route('/job-match', methods=['POST'])
+def job_match():
+    """
+    Compare an analyzed resume against a provided job description.
+    Returns structured compatibility evaluation, matching/missing skills,
+    tailored resume improvements, interview questions, and a 5-step preparation plan.
+    """
+    try:
+        data = request.get_json(silent=True) or (request.form if request.form else {})
+        if not isinstance(data, dict):
+            data = {}
+
+        job_description = data.get('job_description', '').strip()
+        resume_analysis = data.get('resume_analysis', None)
+
+        # 1. Validate resume analysis is provided and non-empty
+        if not resume_analysis or not isinstance(resume_analysis, dict) or not resume_analysis.get('technical_skills'):
+            return jsonify({
+                'error': 'No analyzed resume found. Please upload and analyze your resume first.'
+            }), 400
+
+        # 2. Validate job description presence
+        if not job_description:
+            return jsonify({
+                'error': 'Job description is empty. Please paste a job description to analyze.'
+            }), 400
+
+        # 3. Validate job description length (minimum 20 chars, max 25,000 chars)
+        if len(job_description) < 20:
+            return jsonify({
+                'error': 'Job description is too short. Please paste a more detailed job posting (minimum 20 characters).'
+            }), 400
+
+        if len(job_description) > 25000:
+            return jsonify({
+                'error': 'Job description is excessively long (exceeds 25,000 characters). Please provide a concise job description.'
+            }), 400
+
+        # 4. Perform job description matching
+        match_result = analyzer.analyze_job_description(
+            resume_analysis=resume_analysis,
+            job_description=job_description
+        )
+
+        if 'error' in match_result:
+            return jsonify({'error': match_result['error']}), 400
+
+        return jsonify(match_result), 200
+
+    except Exception:
+        return jsonify({
+            'error': 'An unexpected error occurred while analyzing the job match. Please try again.'
+        }), 500
+
+# ==========================================
 # STEP 3 ROUTES: AI INTERVIEW COACH
 # ==========================================
 
