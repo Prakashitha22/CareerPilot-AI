@@ -14,15 +14,18 @@
         <div class="nav-container">
             <div class="brand">
                 <span class="brand-icon">🚀</span>
-                <span class="brand-name">CareerPilot <span class="accent">AI</span></span>
+                <div class="brand-text-group">
+                    <span class="brand-name">CareerPilot <span class="accent">AI</span></span>
+                    <span class="brand-tagline">AI Resume & Interview Coach</span>
+                </div>
             </div>
-            <div class="nav-badges">
+            <nav class="nav-badges" aria-label="Main Navigation">
+                <a href="#uploadSection" class="nav-quick-link">📄 Resume Analyzer</a>
                 <a href="#interviewCoachSection" class="nav-quick-link">🎯 Interview Coach</a>
                 <a href="#careerIntelligenceSection" class="nav-quick-link nav-intel-link">📈 Career Intelligence</a>
                 <a href="#careerHistorySection" class="nav-quick-link nav-history-link">📚 Career History</a>
-                <span class="tag tag-step">Step 6 &bull; SQLite History</span>
-                <span class="tag tag-hackathon">🎓 College Project</span>
-            </div>
+                <span class="tag tag-platform">🚀 AI Career Platform</span>
+            </nav>
         </div>
     </header>
 
@@ -30,8 +33,16 @@
         <!-- Hero Section -->
         <section class="hero">
             <div class="hero-badge">AI Career Acceleration Platform</div>
-            <h1>AI Resume & Interview Coach</h1>
-            <p class="subtitle">Extract resume content, uncover in-depth skill analysis, practice role-specific technical interviews, and unlock complete career intelligence with tailored learning roadmaps.</p>
+            <h1>Build Your Career with AI</h1>
+            <p class="subtitle">Analyze your resume, practice interviews, identify skill gaps, and create a personalized career roadmap.</p>
+            <div class="hero-actions">
+                <a href="#uploadSection" class="btn-hero-cta">
+                    <span>🚀 Analyze My Resume</span> &darr;
+                </a>
+                <a href="#interviewCoachSection" class="btn-hero-secondary">
+                    <span>🎯 Practice Interview</span>
+                </a>
+            </div>
         </section>
 
         <!-- Flash Notifications -->
@@ -51,23 +62,23 @@
         {% endwith %}
 
         <!-- Top Two-Column Workflow: Upload & Extracted Content -->
-        <div class="grid-layout">
+        <div class="grid-layout" id="uploadSection">
             <!-- 1. Upload Panel -->
-            <section class="card upload-card">
+            <section class="card upload-card" id="uploadCard">
                 <div class="card-header">
                     <h2>1. Upload Resume</h2>
-                    <p>Select your resume in PDF format to extract its content.</p>
+                    <p>Upload your resume PDF to begin your career analysis.</p>
                 </div>
 
                 <form method="POST" action="/" enctype="multipart/form-data" class="upload-form" id="uploadForm">
-                    <div class="dropzone" id="dropzone">
+                    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload PDF resume">
                         <div class="dropzone-content">
                             <div class="upload-icon">📄</div>
                             <p class="dropzone-title"><strong>Click to browse</strong> or drag & drop</p>
                             <p class="dropzone-hint">Supports PDF files up to 16MB</p>
                             <span id="selectedFileName" class="selected-file-badge" style="display: none;"></span>
                         </div>
-                        <input type="file" name="resume" id="fileInput" accept=".pdf" required>
+                        <input type="file" name="resume" id="fileInput" accept=".pdf" required aria-label="Resume PDF File">
                     </div>
 
                     <button type="submit" class="btn-primary" id="extractBtn">
@@ -980,87 +991,55 @@
                 </div>
             </div>
         </section>
-
-        <!-- Project Roadmap Progress Tracker -->
-        <section class="card roadmap-card">
-            <div class="roadmap-header">
-                <h3>Project Roadmap Progress</h3>
-                <span class="roadmap-badge">All 9 Steps Active</span>
-            </div>
-            <div class="roadmap-steps">
-                <div class="step completed">
-                    <div class="step-num">1</div>
-                    <div class="step-info">
-                        <span class="step-title">Upload PDF</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">2</div>
-                    <div class="step-info">
-                        <span class="step-title">Extract Text</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">3</div>
-                    <div class="step-info">
-                        <span class="step-title">Analyze Resume</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">4</div>
-                    <div class="step-info">
-                        <span class="step-title">Identify Skills</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">5</div>
-                    <div class="step-info">
-                        <span class="step-title">Suggest Roles</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">6</div>
-                    <div class="step-info">
-                        <span class="step-title">Interview Qs</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">7</div>
-                    <div class="step-info">
-                        <span class="step-title">Enter Answers</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">8</div>
-                    <div class="step-info">
-                        <span class="step-title">AI Feedback</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step completed">
-                    <div class="step-num">9</div>
-                    <div class="step-info">
-                        <span class="step-title">Career Roadmap</span>
-                        <span class="step-status">Completed</span>
-                    </div>
-                </div>
-                <div class="step active-step">
-                    <div class="step-num">10</div>
-                    <div class="step-info">
-                        <span class="step-title">SQLite History</span>
-                        <span class="step-status">Step 6 Active</span>
-                    </div>
-                </div>
-            </div>
-        </section>
     </main>
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand-col">
+                <div class="brand">
+                    <span class="brand-icon">🚀</span>
+                    <div class="brand-text-group">
+                        <span class="brand-name">CareerPilot <span class="accent">AI</span></span>
+                    </div>
+                </div>
+                <p class="footer-tagline">AI Resume &amp; Interview Coach</p>
+                <p class="footer-desc">An intelligent, production-ready career acceleration platform designed to empower job seekers and professionals with resume intelligence, role-specific technical interview preparation, and actionable career guidance.</p>
+                <div class="footer-meta-badges">
+                    <span class="footer-badge">🟢 Google Gemini 3.6 Flash</span>
+                    <span class="footer-badge">🧪 Automated Tests</span>
+                    <span class="footer-badge">🔒 Private &amp; Secure</span>
+                </div>
+            </div>
+
+            <div class="footer-links-col">
+                <h4 class="footer-heading">Platform Features</h4>
+                <ul class="footer-links">
+                    <li><a href="#uploadSection">📄 Resume Analyzer</a></li>
+                    <li><a href="#interviewCoachSection">🎯 AI Interview Coach</a></li>
+                    <li><a href="#careerIntelligenceSection">📈 Career Intelligence</a></li>
+                    <li><a href="#careerHistorySection">📚 Career History</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-links-col">
+                <h4 class="footer-heading">Project Resources</h4>
+                <ul class="footer-links">
+                    <li><a href="https://github.com/Prakashitha22/CareerPilot-AI" target="_blank" rel="noopener noreferrer">📦 GitHub Repository &rarr;</a></li>
+                    <li><a href="/health" target="_blank" rel="noopener noreferrer">🩺 Health Status API</a></li>
+                    <li><span class="footer-text-item">🐍 Python &bull; Flask &bull; SQLite</span></li>
+                    <li><span class="footer-text-item">⚖️ MIT Open Source License</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-bottom-container">
+                <p>&copy; 2026 CareerPilot AI &bull; AI Career Acceleration Platform</p>
+                <p class="footer-tech-stack">AI Resume &amp; Interview Preparation Platform</p>
+            </div>
+        </div>
+    </footer>
 
     <script>
         // Global state for unifying Step 2, Step 3, and Step 4
@@ -1068,17 +1047,30 @@
         let latestInterviewSummary = null;
         let currentIntelRole = 'Python Developer';
 
-        // File selection label
+        // File selection label with file size feedback
         const fileInput = document.getElementById('fileInput');
         const selectedFileName = document.getElementById('selectedFileName');
+        const uploadForm = document.getElementById('uploadForm');
 
         if (fileInput) {
             fileInput.addEventListener('change', function() {
                 if (this.files && this.files.length > 0) {
-                    selectedFileName.textContent = 'Selected: ' + this.files[0].name;
+                    const f = this.files[0];
+                    const sizeMb = (f.size / (1024 * 1024)).toFixed(2);
+                    selectedFileName.textContent = `✓ ${f.name} (${sizeMb} MB)`;
                     selectedFileName.style.display = 'inline-block';
                 } else {
                     selectedFileName.style.display = 'none';
+                }
+            });
+        }
+
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function() {
+                const btn = document.getElementById('extractBtn');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span>⏳ Extracting Resume Text...</span>';
                 }
             });
         }
