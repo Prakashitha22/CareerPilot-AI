@@ -3,6 +3,7 @@ import io
 import unittest
 import sqlite3
 from pypdf import PdfWriter
+from unittest.mock import patch, MagicMock
 from app import app
 import analyzer
 import database
@@ -543,6 +544,69 @@ class CareerPilotTestCase(unittest.TestCase):
     def test_gemini_model_configuration(self):
         """Verify the Gemini model configuration defaults to current stable gemini-2.5-flash."""
         self.assertEqual(analyzer.GEMINI_MODEL, 'gemini-2.5-flash')
+
+    def test_sanitize_gemini_message(self):
+        """Verify sanitize_gemini_message thoroughly redacts API keys and URL params."""
+        fake_key = "AIzaSySecretFakeApiKey1234567890123"
+        url_with_key = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={fake_key}"
+        sanitized = analyzer.sanitize_gemini_message(url_with_key, api_key=fake_key)
+        self.assertNotIn(fake_key, sanitized)
+        self.assertIn("key=[REDACTED]", sanitized)
+
+        # Test error body containing raw key
+        error_body = f"Invalid API key: {fake_key}"
+        sanitized_body = analyzer.sanitize_gemini_message(error_body, api_key=fake_key)
+        self.assertNotIn(fake_key, sanitized_body)
+        self.assertIn("[REDACTED_API_KEY]", sanitized_body)
+
+    def test_log_gemini_diagnostic(self):
+        """Verify log_gemini_diagnostic outputs required diagnostic fields without leaking secrets."""
+        fake_key = "AIzaSySecretFakeApiKey1234567890123"
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.json.return_value = {
+            "error": {
+                "code": 404,
+                "message": f"models/gemini-2.5-flash not found. url key={fake_key}",
+                "status": "NOT_FOUND"
+            }
+        }
+        mock_exc = Exception("Request failed")
+        mock_exc.response = mock_response
+
+        with patch('analyzer.get_gemini_api_key', return_value=fake_key), \
+             patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+            analyzer.log_gemini_diagnostic(mock_exc, operation="test_op")
+            log_output = mock_stderr.getvalue()
+
+            # Verify required fields are logged
+            self.assertIn("Operation: test_op", log_output)
+            self.assertIn(f"Model: {analyzer.GEMINI_MODEL}", log_output)
+            self.assertIn("Exception: Exception", log_output)
+            self.assertIn("Status: HTTP 404", log_output)
+            self.assertIn("Message: models/gemini-2.5-flash not found", log_output)
+
+            # Security: ensure secret is completely absent
+            self.assertNotIn(fake_key, log_output)
+
+    def test_analyze_resume_diagnostic_fallback(self):
+        """Verify analyze_resume catches exceptions, falls back safely, and does not leak diagnostic info to client."""
+        fake_key = "AIzaSyTestSecretKey1234567890123"
+        with patch('analyzer.get_gemini_api_key', return_value=fake_key), \
+             patch('analyzer.call_gemini_api', side_effect=Exception(f"Google internal error for url key={fake_key}")), \
+             patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+            result = analyzer.analyze_resume("Python developer with Flask experience.")
+            
+            # Diagnostic logged server-side
+            log_output = mock_stderr.getvalue()
+            self.assertIn("[Gemini Diagnostic]", log_output)
+            self.assertNotIn(fake_key, log_output)
+
+            # Client response must remain safe and standard
+            self.assertNotIn(fake_key, str(result))
+            self.assertNotIn("[Gemini Diagnostic]", str(result))
+            self.assertEqual(result.get('source'), 'demo_fallback')
+            self.assertIn('Falling back to smart offline analyzer', result.get('notice', ''))
 
 if __name__ == '__main__':
     unittest.main()

@@ -464,7 +464,7 @@ py -m unittest discover -s tests -v
 python3 -m unittest discover -s tests -v
 ```
 
-### Test Coverage Breakdown (28 Automated Tests)
+### Test Coverage Breakdown (31 Automated Tests)
 - `test_homepage_loads`: Confirms HTTP 200 and validates presence of all 5 UI sections.
 - `test_upload_no_file`: Verifies missing file payload is handled with a clean flash redirect.
 - `test_upload_empty_filename`: Verifies empty file submissions are rejected.
@@ -493,6 +493,9 @@ python3 -m unittest discover -s tests -v
 - `test_production_startup_configuration`: Confirms the `app` WSGI callable is valid for Gunicorn execution (`gunicorn app:app`).
 - `test_port_configuration_logic`: Validates dynamic `$PORT` environment variable binding for cloud providers.
 - `test_gemini_model_configuration`: Verifies the Gemini model configuration defaults to current stable `gemini-2.5-flash`.
+- `test_sanitize_gemini_message`: Verifies API key and sensitive URL query parameter redaction.
+- `test_log_gemini_diagnostic`: Confirms server-side diagnostic logging of model, exception, HTTP status, and sanitized message.
+- `test_analyze_resume_diagnostic_fallback`: Verifies graceful fallback and zero diagnostic leakage to client payloads.
 
 ---
 

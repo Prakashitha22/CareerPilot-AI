@@ -95,9 +95,12 @@ test_upload_invalid_extension (test_app.CareerPilotTestCase.test_upload_invalid_
 test_upload_no_file (test_app.CareerPilotTestCase.test_upload_no_file) ... ok
 test_upload_valid_pdf (test_app.CareerPilotTestCase.test_upload_valid_pdf) ... ok
 test_gemini_model_configuration (test_app.CareerPilotTestCase.test_gemini_model_configuration) ... ok
+test_sanitize_gemini_message (test_app.CareerPilotTestCase.test_sanitize_gemini_message) ... ok
+test_log_gemini_diagnostic (test_app.CareerPilotTestCase.test_log_gemini_diagnostic) ... ok
+test_analyze_resume_diagnostic_fallback (test_app.CareerPilotTestCase.test_analyze_resume_diagnostic_fallback) ... ok
 
 ----------------------------------------------------------------------
-Ran 28 tests in 0.734s
+Ran 31 tests in 0.465s
 
 OK (100% Pass Rate)
 ```
@@ -110,11 +113,24 @@ OK (100% Pass Rate)
 - Added configurable `GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash').strip()` in [`analyzer.py`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/analyzer.py).
 - Preserved all `GEMINI_API_KEY` handling, structured JSON outputs, error handling, and smart heuristic offline fallback guarantees.
 - Updated UI badges in [`templates/index.html`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/templates/index.html) and documentation in [`README.md`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/README.md).
-- Added `test_gemini_model_configuration` to automated test suite (28/28 tests passing).
 
 ---
 
-## 4. How to Run the Application
+## 4. Safe Server-Side Diagnostic Logging
+
+When Gemini requests fail in production or cloud environments (e.g., Render), [`analyzer.py`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/analyzer.py) now provides structured, safe server-side diagnostics:
+- **Logged Attributes Only**:
+  1. Exception Type (e.g. `HTTPError`, `Timeout`, `ConnectionError`)
+  2. HTTP Status Code (e.g. `HTTP 400`, `HTTP 404`, `HTTP 429`)
+  3. Short Sanitized Error Message from Google's response
+  4. Current Gemini Model (`gemini-2.5-flash`)
+- **Strict Key Redaction**: `sanitize_gemini_message` removes and redacts any API key or `key=` query parameter. `GEMINI_API_KEY` is never logged or exposed.
+- **Zero Client Leakage**: Diagnostic details are logged exclusively to server stderr / application logs and are never returned to the browser.
+- **Automated Tests**: Added unit tests `test_sanitize_gemini_message`, `test_log_gemini_diagnostic`, and `test_analyze_resume_diagnostic_fallback` (31/31 tests passing).
+
+---
+
+## 5. How to Run the Application
 
 ### Local Development (Windows)
 ```powershell

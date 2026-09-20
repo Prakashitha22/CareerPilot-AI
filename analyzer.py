@@ -3,10 +3,81 @@ import json
 import re
 import requests
 
+import sys
+import logging
+
+logger = logging.getLogger('analyzer')
+
 def get_gemini_api_key():
     return os.environ.get('GEMINI_API_KEY', '').strip()
 
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash').strip()
+
+def sanitize_gemini_message(msg, api_key=None):
+    """
+    Remove or redact API keys from URLs, error messages, and trace strings.
+    Guarantees that sensitive credentials are never leaked to logs or terminals.
+    """
+    if not msg:
+        return ""
+    msg = str(msg)
+    if api_key:
+        msg = msg.replace(api_key, "[REDACTED_API_KEY]")
+    # Redact query parameter key (e.g. ?key=AIza... or &key=...)
+    msg = re.sub(r'([?&]key=)[^&\s]+', r'\1[REDACTED]', msg)
+    # Redact standard Google API key patterns (e.g. AIzaSy...)
+    msg = re.sub(r'AIza[0-9A-Za-z-_]{35}', '[REDACTED_API_KEY]', msg)
+    return msg
+
+def log_gemini_diagnostic(exc, operation="resume_analysis"):
+    """
+    Safely log server-side diagnostic information when a Gemini request fails.
+    Logs ONLY:
+      - exception type
+      - HTTP status code if available
+      - short sanitized error message from Google's response
+      - Gemini model being used
+    Guarantees GEMINI_API_KEY is never logged or exposed.
+    """
+    exc_type = type(exc).__name__
+    status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
+
+    # Extract short error message from Google's JSON response or exception string
+    raw_message = ""
+    res = getattr(exc, 'response', None)
+    if res is not None:
+        try:
+            err_json = res.json()
+            if isinstance(err_json, dict) and 'error' in err_json:
+                error_obj = err_json['error']
+                if isinstance(error_obj, dict):
+                    raw_message = error_obj.get('message') or error_obj.get('status') or str(error_obj)
+                else:
+                    raw_message = str(error_obj)
+            else:
+                raw_message = str(err_json)
+        except Exception:
+            raw_message = getattr(res, 'text', '')[:200]
+
+    if not raw_message:
+        raw_message = str(exc)
+
+    api_key = get_gemini_api_key()
+    sanitized_msg = sanitize_gemini_message(raw_message, api_key=api_key)
+    # Condense whitespace and truncate for a single-line log
+    sanitized_msg = " ".join(sanitized_msg.split())[:250]
+
+    status_str = f"HTTP {status_code}" if status_code is not None else "N/A"
+    log_line = (
+        f"[Gemini Diagnostic] Operation: {operation} | "
+        f"Model: {GEMINI_MODEL} | "
+        f"Exception: {exc_type} | "
+        f"Status: {status_str} | "
+        f"Message: {sanitized_msg}"
+    )
+
+    logger.warning(log_line)
+    print(log_line, file=sys.stderr, flush=True)
 
 # ==========================================
 # 1. RESUME ANALYSIS FUNCTIONS (STEP 2)
@@ -347,7 +418,8 @@ def analyze_resume(resume_text):
     if api_key:
         try:
             return call_gemini_api(api_key, resume_text)
-        except Exception:
+        except Exception as e:
+            log_gemini_diagnostic(e, operation="resume_analysis")
             fallback = smart_heuristic_analysis(resume_text)
             fallback['notice'] = 'Gemini API is unreachable or encountered an issue. Falling back to smart offline analyzer.'
             return fallback
@@ -676,8 +748,8 @@ Return ONLY valid JSON:
             data = json.loads(raw_text)
             if 'questions' in data and len(data['questions']) >= 5:
                 return data['questions'][:5]
-        except Exception:
-            # Fall through to curated fallback
+        except Exception as e:
+            log_gemini_diagnostic(e, operation="interview_questions")
             pass
 
     return generate_fallback_questions(role, resume_text)
@@ -824,7 +896,8 @@ Evaluate this response objectively and return ONLY valid JSON matching this exac
             except (ValueError, TypeError):
                 eval_data['score'] = 7.0
             return eval_data
-        except Exception:
+        except Exception as e:
+            log_gemini_diagnostic(e, operation="evaluate_interview_answer")
             pass
 
     return evaluate_fallback_answer(role, question, answer, question_type)
@@ -900,7 +973,8 @@ Provide a concise, strictly structured JSON summary:
                 'areas_to_improve': data.get('areas_to_improve', ['Practice structuring answers with concrete metrics']),
                 'recommended_topics': data.get('recommended_topics', [f'Advanced {role} Architecture', 'System Design Trade-offs'])
             }
-        except Exception:
+        except Exception as e:
+            log_gemini_diagnostic(e, operation="generate_interview_summary")
             pass
 
     # Heuristic summary fallback
