@@ -1,270 +1,287 @@
-# CareerPilot AI — AI Resume & Interview Coach
+# CareerPilot AI — Intelligent AI Resume & Interview Coach
 
-An intelligent, web-based career acceleration and interview preparation platform built with **Python**, **Flask**, **SQLite**, and **Google Gemini Generative AI**. 
+An intelligent, production-ready career acceleration and interview preparation web platform built with Python, Flask, SQLite, and Google Gemini Generative AI.
 
-CareerPilot AI bridges the gap between static resume screening and technical interview performance. It provides automated resume text extraction, structured AI candidate analysis, an interactive 5-question technical and behavioral mock interview coach with real-time scoring, an executive career intelligence dashboard with personalized 5-step learning roadmaps, and a **persistent SQLite career history database** that preserves student progress across sessions.
-
-Designed and engineered as a comprehensive academic college software project, the platform features a **dual-engine architecture** that seamlessly toggles between live Google Gemini 3.6 Flash REST APIs and high-precision offline heuristic fallback engines, ensuring 100% operational reliability during offline presentations, evaluations, and demonstrations.
-
----
-
-## Table of Contents
-1. [Problem Statement](#problem-statement)
-2. [Project Objectives](#project-objectives)
-3. [Key Features](#key-features)
-4. [System Architecture & Workflow](#system-architecture--workflow)
-5. [Database Architecture & Schema](#database-architecture--schema)
-6. [Technology Stack](#technology-stack)
-7. [Project Structure](#project-structure)
-8. [Prerequisites & Installation](#prerequisites--installation)
-9. [Configuration & Environment Variables](#configuration--environment-variables)
-10. [Running the Application](#running-the-application)
-11. [Deployment Preparation](#deployment-preparation)
-12. [End-to-End User Guide](#end-to-end-user-guide)
-13. [Dual-Engine & Offline Fallback Architecture](#dual-engine--offline-fallback-architecture)
-14. [Automated Testing Suite](#automated-testing-suite)
-15. [Security & Robustness Practices](#security--robustness-practices)
-16. [Future Scope & Enhancements](#future-scope--enhancements)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7.svg?logo=render&logoColor=white)](https://careerpilot-ai-m0wq.onrender.com)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717.svg?logo=github&logoColor=white)](https://github.com/Prakashitha22/CareerPilot-AI)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.0%2B-000000.svg?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-3.6%20Flash-4285F4.svg?logo=google&logoColor=white)](https://ai.google.dev/)
+[![Database](https://img.shields.io/badge/Database-SQLite%203-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Automated Tests](https://img.shields.io/badge/Automated%20Tests-49%20Passing-success.svg)](tests/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## Problem Statement
+## Live Demo
 
-Entering today's competitive technology job market presents several steep hurdles for college graduates and early-career developers:
-- **Opaque Applicant Tracking Systems (ATS)**: Candidates receive automated rejection emails without understanding which critical skills, keywords, or quantifiable achievements were missing from their resumes.
-- **Disconnected Interview Preparation**: Traditional interview prep tools are generic and detached from a candidate's actual resume experience, failing to simulate real-world contextual technical questioning.
-- **Lack of Actionable Roadmaps**: Candidates rarely receive structured, chronological steps showing how to close technical gaps and transition from their current profile to their desired job role.
-- **Session Data Loss**: Most web prototypes lose all candidate scans, interview scores, and improvement suggestions as soon as the browser tab is refreshed or closed.
-- **Fragility in Demonstration**: Many AI-driven prototypes fail completely during live presentations when network connectivity drops or third-party cloud API rate limits are exceeded.
-
-CareerPilot AI solves these problems through an integrated, reliable, and beginner-friendly web application with persistent local storage.
+Experience the live application hosted on Render:
+👉 **[https://careerpilot-ai-m0wq.onrender.com](https://careerpilot-ai-m0wq.onrender.com)**
 
 ---
 
-## Project Objectives
+## GitHub
 
-1. **Automate Resume Ingestion**: Safely accept PDF documents up to 16MB, parse multi-page layout text, and validate integrity without server-side crashes.
-2. **Deliver Comprehensive Candidate Intelligence**: Extract 11 distinct dimensions of candidate data (education, technical skills, soft skills, projects, experience, strengths, gaps, suggested roles, and targeted resume improvements).
-3. **Simulate Real-World Technical Interviews**: Dynamically generate role-specific questions across technical fundamentals, system architecture, resume projects, troubleshooting, and behavioral scenarios.
-4. **Provide Objective, Multi-Dimensional Feedback**: Score responses out of 10.0 with granular feedback on technical accuracy, relevance, clarity, positive points, areas for improvement, and exemplary 10/10 model answers.
-5. **Synthesize Career Intelligence**: Calculate an overall career readiness score (weighting resume alignment and live interview performance), perform multi-role matching, and generate an actionable 5-step learning timeline.
-6. **Persist Complete Career Records**: Store all resume analyses, interview transcripts, and career reports in a local SQLite database (`careerpilot.db`) using clean parameterized queries and anonymous sessions.
-7. **Guarantee Zero-Downtime Reliability**: Incorporate a robust offline heuristic fallback that delivers deterministic, realistic results even without an internet connection or Gemini API key.
+Access the source code, issue tracker, and project repository:
+👉 **[https://github.com/Prakashitha22/CareerPilot-AI](https://github.com/Prakashitha22/CareerPilot-AI)**
 
 ---
 
-## Key Features
+## Overview
 
-### 1. Resume PDF Upload & Text Extraction
-- **Drag-and-drop & Click-to-Upload** interface supporting PDF documents up to 16MB.
-- **Multi-page plain text parsing** powered by `pypdf`.
-- Path traversal protection, file format validation, and safe UUID fallback naming.
-- Real-time word and character extraction metrics.
+CareerPilot AI bridges the critical gap between static resume screening and technical interview performance. Rather than treating resume drafting, job alignment, and mock interviews as disjointed steps, CareerPilot AI brings them together into an integrated, end-to-end preparation platform.
 
-### 2. AI Resume Intelligence Dashboard
-- **Structured 11-Field Extraction**:
-  - Full candidate name and executive profile summary
-  - Education history (degree, institution, graduation year, CGPA/honors)
-  - Technical skills categorized by language, database, framework, and cloud tools
-  - Soft skills and interpersonal attributes
-  - Work and internship experience summaries
-  - Project portfolio analysis
-  - Professional certifications
-  - Key technical and leadership strengths
-  - Missing and complementary high-demand skills
-  - Top 3 suggested job roles with match percentages
-  - Actionable resume improvement recommendations
-- **1-Click Launchers**: Instantly click any suggested job role to launch tailored mock interviews or calibrate career intelligence.
+Job seekers can parse PDF resumes, extract multi-dimensional profile intelligence, benchmark their background against real job descriptions, practice with an adaptive AI interview coach, review dynamic career readiness metrics, and persist their progress across sessions—all within a fast, responsive glassmorphic interface.
 
-### 3. Interactive AI Interview Coach
-- **Pre-Configured & Custom Roles**: Choose from industry roles (*Python Developer, Software Engineer, Backend Developer, Frontend Developer, Data Analyst, Data Scientist, Machine Learning Engineer*) or enter custom specialized titles.
-- **5-Question Structured Interview Cycle**:
-  1. Technical Fundamentals
-  2. In-Depth System / Architecture
-  3. Resume & Project Experience
-  4. Real-World Debugging & Problem Solving
-  5. Behavioral Collaboration (STAR Framework)
-- **Real-Time AI Response Evaluation**:
-  - Numerical score out of 10.0
-  - Technical accuracy, relevance, and clarity ratings
-  - Specific positive highlights and constructive critique
-  - Comprehensive model answers illustrating 10/10 responses
-- **Session Performance Report**: Aggregates average scores, determines hiring tiers (*Solid Hire, Strong Hire, Developing*), highlights strong areas, identifies gaps, and preserves the full Q&A transcript.
-
-### 4. Career Intelligence & Growth Dashboard
-- **Dynamic Career Readiness Score**: Combines resume alignment (50%) and live interview performance (50%).
-- **Skill Gap Analysis**: Visual progress bar comparing current candidate skills against expected industry competencies.
-- **Multi-Role Suitability Matching**: Explores suitability percentages and skill overlaps across adjacent career tracks.
-- **Personalized 5-Step Learning Roadmap**: Phased chronological timeline (Weeks 1 to 8+) guiding students from core gap closure to portfolio capstones and job application readiness.
-- **Portfolio Project Recommendations**: 3 domain-specific capstone project concepts detailing target architecture and skills practiced.
-- **Resume Checklist**: Practical guidelines for quantifiable metrics, ATS keyword positioning, and link hygiene.
-- **Executive Career Summary**: High-level synthesis of market positioning and immediate next action.
-
-### 5. SQLite Database & Persistent Career History
-- **Automatic Initialization**: `careerpilot.db` is created automatically on application launch without manual setup scripts.
-- **Relational Tables**: Tracks `candidates`, `resume_analyses`, `interview_sessions`, and `career_reports` with foreign-key integrity and cascade deletion.
-- **Zero Raw JSON Exposed**: Complete historical sessions can be viewed through interactive human-readable modals and card feeds.
-- **Lightweight Anonymous Sessions**: Uses Flask's signed cookie sessions to associate records with the current student without requiring complex login passwords.
-- **Safe Candidate-Scoped Clearing**: Allows users to reset their own session history with confirmation without wiping the entire database.
+The platform is engineered around a resilient **dual-engine design**: it harnesses **Google Gemini 3.6 Flash** via a secured REST integration with exponential-backoff retries for live AI synthesis, and automatically switches to a deterministic, high-precision offline heuristic engine whenever API keys are absent or external rate limits occur.
 
 ---
 
-## System Architecture & Workflow
+## Core Features
 
-```
-+-----------------------------------------------------------------------------------+
-|                                  USER BROWSER                                     |
-|   - PDF Resume Upload & Text View        - 11-Field Resume Intelligence           |
-|   - 5-Question Interview Simulation      - Career Readiness Gauge & 5-Step Map    |
-|   - Career History Feed (Filter/View)    - Record Inspection Modals               |
-+-----------------------------------------------------------------------------------+
-                                          |
-                      HTTP POST / GET (Multipart & JSON APIs)
-                                          v
-+-----------------------------------------------------------------------------------+
-|                              FLASK BACKEND (app.py)                               |
-|   - Endpoints: /, /analyze, /interview/*, /career-intelligence, /api/history/*    |
-|   - Anonymous Session Manager: get_current_candidate_id()                         |
-|   - Security: Path Traversal Check, 16MB Limit, HTTP Error Handlers (413, 404, 500) |
-+-----------------------------------------------------------------------------------+
-             /                                               \
-            /                                                 \
-           v                                                   v
-+------------------------------------+       +------------------------------------+
-|  INTELLIGENCE ENGINE (analyzer.py) |       |     DATABASE LAYER (database.py)   |
-|                                    |       |                                    |
-|   [Google Gemini 3.6 Flash]        |       |   [SQLite Engine: careerpilot.db]  |
-|   - Structured JSON output         |       |   - Parameterized SQL queries      |
-|   - Low temperature (0.2)          |       |   - Tables:                        |
-|                                    |       |     • candidates                   |
-|   [Smart Offline Heuristic Engine] |       |     • resume_analyses              |
-|   - 50+ tech regex keywords        |       |     • interview_sessions           |
-|   - Curated role question banks    |       |     • career_reports               |
-|   - Heuristic STAR answer scoring  |       |   - Fast indexes on candidate_id   |
-+------------------------------------+       +------------------------------------+
+### AI Resume Intelligence
+- **PDF Resume Parsing**: Handles multi-page documents up to 16 MB with text extraction via `pypdf`.
+- **11-Dimensional Profile Breakdown**: Extracts Candidate Summary, Education, Technical Skills, Soft Skills, Work Experience, Projects, Certifications, Key Strengths, Skill Gaps, Top Suggested Roles, and Resume Improvement Tips.
+- **One-Click Action Launchers**: Seamlessly launch tailored interview sessions or career intelligence reports based on suggested roles.
+
+### Job Description Matcher
+- **Targeted Compatibility Scoring**: Computes an objective 0–100 match score between candidate qualifications and target job postings.
+- **Granular Skill & Experience Breakdown**: Highlights confirmed matching skills alongside critical missing competencies.
+- **Tailored Resume & Interview Guidance**: Delivers concrete resume bullet optimizations, learning recommendations, role-specific interview questions, and a 5-step preparation plan.
+
+### AI Interview Coach
+- **5-Stage Structured Interviews**: Generates role-specific questions across Technical Fundamentals, System Architecture, Resume Project Deep-Dive, Debugging/Troubleshooting, and Behavioral (STAR) scenarios.
+- **Real-Time Granular Scoring**: Scores answers on a 0.0–10.0 scale with technical accuracy, relevance, and clarity ratings.
+- **Exemplary Model Answers**: Provides expandable 10/10 model answers and constructive critique for each response.
+- **Session Performance Synthesis**: Aggregates average scores and assigns hiring tiers (*Solid Hire*, *Strong Hire*, *Developing*).
+
+### Career Intelligence Dashboard
+- **Calibrated Career Readiness**: Combines resume alignment (50%) and live interview performance (50%) into a unified readiness index.
+- **Skill Gap Radar**: Visual comparison of current candidate capabilities versus industry benchmarks.
+- **Multi-Role Suitability Matrix**: Match percentages across adjacent technical career tracks.
+- **5-Step Chronological Learning Roadmap**: Phased milestones (Weeks 1 to 8+) guiding candidates from gap closure to portfolio development.
+- **Portfolio Recommendations & ATS Checklist**: Curated capstone project ideas and actionable resume hygiene guidelines.
+
+### Persistent Career History
+- **Relational Storage**: Normalized SQLite schema saving candidates, resume analyses, interview transcripts, and career reports.
+- **Session Continuity**: Retains candidate activity across browser sessions using anonymous session identifiers.
+- **Interactive Feed & Filter Pills**: Chronological activity log with quick filtering (*All*, *Resume Analyses*, *Mock Interviews*, *Career Reports*), record inspection modals, and candidate-scoped history deletion.
+
+---
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A[Upload PDF Resume] --> B[Extract Plain Text]
+    B --> C[Analyze Resume Intelligence]
+    C --> D[Match Target Job Description]
+    C --> E[Start AI Mock Interview]
+    D --> F[Generate Preparation Roadmap]
+    E --> G[Evaluate Answers & Summary]
+    F --> H[Career Intelligence Dashboard]
+    G --> H
+    H --> I[(SQLite Career History)]
 ```
 
----
-
-## Database Architecture & Schema
-
-CareerPilot AI uses Python's built-in `sqlite3` module. No external database servers or complex ORMs are required.
-
-### 1. `candidates` Table
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique candidate identifier |
-| `candidate_name` | TEXT | NOT NULL DEFAULT 'Candidate' | Extracted or default candidate name |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Registration timestamp |
-| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Last activity timestamp |
-
-### 2. `resume_analyses` Table
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Analysis record ID |
-| `candidate_id` | INTEGER | NOT NULL, FK -> candidates(id) | Associated candidate ID |
-| `resume_filename` | TEXT | DEFAULT 'resume.pdf' | Uploaded PDF filename |
-| `summary` | TEXT | | Executive profile summary |
-| `education` | TEXT | JSON Encoded | Array of degrees, institutions, and years |
-| `technical_skills` | TEXT | JSON Encoded | Array of detected technical skills |
-| `soft_skills` | TEXT | JSON Encoded | Array of detected soft skills |
-| `experience` | TEXT | JSON Encoded | Array of work/internship experience items |
-| `projects` | TEXT | JSON Encoded | Array of project items |
-| `certifications` | TEXT | JSON Encoded | Array of certification strings |
-| `strengths` | TEXT | JSON Encoded | Array of candidate strengths |
-| `missing_skills` | TEXT | JSON Encoded | Array of skill gap recommendations |
-| `suggested_roles` | TEXT | JSON Encoded | Array of matched roles with percentages |
-| `resume_improvements`| TEXT | JSON Encoded | Array of actionable improvement tips |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation timestamp |
-
-### 3. `interview_sessions` Table
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Interview session ID |
-| `candidate_id` | INTEGER | NOT NULL, FK -> candidates(id) | Associated candidate ID |
-| `target_role` | TEXT | NOT NULL | Target job role |
-| `questions` | TEXT | JSON Encoded | Array of question prompts |
-| `answers` | TEXT | JSON Encoded | Array of candidate responses |
-| `evaluations` | TEXT | JSON Encoded | Array of scoring objects and model answers |
-| `overall_score` | REAL | DEFAULT 0.0 | Average score (0.0 to 10.0) |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Completion timestamp |
-
-### 4. `career_reports` Table
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Career report ID |
-| `candidate_id` | INTEGER | NOT NULL, FK -> candidates(id) | Associated candidate ID |
-| `target_role` | TEXT | NOT NULL | Target job role |
-| `readiness_percentage` | INTEGER | DEFAULT 0 | Overall career readiness score |
-| `skill_gap` | TEXT | JSON Encoded | Matched vs. missing competencies |
-| `role_matching` | TEXT | JSON Encoded | Multi-role suitability percentages |
-| `learning_roadmap` | TEXT | JSON Encoded | 5-step sequential learning plan |
-| `recommended_projects` | TEXT | JSON Encoded | Capstone portfolio project concepts |
-| `resume_checklist` | TEXT | JSON Encoded | Actionable resume enhancement tips |
-| `career_summary` | TEXT | JSON Encoded | Final synthesis statement and next action |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Calibration timestamp |
+1. **Upload & Parse**: The candidate uploads a PDF resume. The system parses multi-page plain text and computes document metrics.
+2. **Profile Intelligence**: The candidate triggers resume analysis. The dual-engine extracts 11 structured dimensions and automatically persists the record.
+3. **Job Alignment**: The candidate pastes a target job posting. The Job Description Matcher computes match scores, identifies missing skills, recommends resume revisions, and formulates interview questions.
+4. **Mock Interview**: The candidate takes a 5-question mock interview, receiving real-time evaluation and 10/10 model answers.
+5. **Career Synthesis**: The platform unifies resume qualification and interview performance into a career readiness score and a personalized 5-step learning roadmap.
+6. **Persistence**: All activities are safely stored in SQLite for instant review and chronological history tracking.
 
 ---
 
-## Technology Stack
+## Architecture
 
-| Layer | Component | Description |
+```mermaid
+graph TD
+    subgraph Client Layer
+        Browser[Modern Web Browser]
+        UI[Glassmorphic Responsive UI]
+        JS[Vanilla JavaScript Controllers]
+    end
+
+    subgraph Application Layer [Flask WSGI / Gunicorn]
+        App[Flask Application Core (app.py)]
+        HealthRoute[GET /health]
+        UploadRoute[POST /upload]
+        AnalyzeRoute[POST /analyze]
+        JobMatchRoute[POST /job-match]
+        InterviewRoutes[Interview Q&A Endpoints]
+        HistoryRoutes[RESTful History Endpoints]
+    end
+
+    subgraph Intelligence Engine [Dual-Engine Controller (analyzer.py)]
+        Router{GEMINI_API_KEY Available?}
+        Gemini[Google Gemini 3.6 Flash REST API]
+        Retry[Exponential Backoff Retry Logic]
+        Heuristic[Smart Offline Heuristic Fallback]
+    end
+
+    subgraph Data Layer [Persistence Layer (database.py)]
+        DB[(SQLite 3 Database: careerpilot.db)]
+        T1[candidates]
+        T2[resume_analyses]
+        T3[interview_sessions]
+        T4[career_reports]
+    end
+
+    Browser --> UI --> JS
+    JS --> App
+    App --> HealthRoute
+    App --> UploadRoute
+    App --> AnalyzeRoute
+    App --> JobMatchRoute
+    App --> InterviewRoutes
+    App --> HistoryRoutes
+    AnalyzeRoute --> Router
+    JobMatchRoute --> Router
+    InterviewRoutes --> Router
+    Router -- Yes --> Gemini
+    Gemini -- Temporary Error (429/503/5xx) --> Retry
+    Retry -- Retries Exhausted --> Heuristic
+    Router -- No --> Heuristic
+    App --> DB
+    DB --- T1 & T2 & T3 & T4
+```
+
+---
+
+## Dual-Engine AI Design
+
+CareerPilot AI uses a dual-engine pattern to ensure high-quality generative intelligence when cloud AI is available, without sacrificing uptime when it is not.
+
+| Capability | Primary Engine (Google Gemini 3.6 Flash) | Fallback Engine (Deterministic Heuristic) |
 |---|---|---|
-| **Backend Framework** | **Python 3.10+ / Flask 3.0+** | Lightweight WSGI web application framework managing routing, requests, and JSON APIs. |
-| **Database Engine** | **SQLite 3 (Built-in `sqlite3`)** | Serverless, zero-configuration relational database storing candidates and session records in `careerpilot.db`. |
-| **PDF Extraction Engine** | **pypdf 4.0+** | Pure-Python PDF extraction library handling multi-page parsing, metadata, and corruption exceptions. |
-| **Generative AI** | **Google Gemini 3.6 Flash REST API** | Cloud-based generative AI utilizing structured JSON generation schema for natural language reasoning. |
-| **Fallback Intelligence** | **Native Heuristic Rule Engine** | Python pattern matching, regex tokenizers, curated question databases, and scoring algorithms. |
-| **Configuration** | **python-dotenv** | Secure management of environment variables and sensitive credentials. |
-| **Frontend UI** | **HTML5, CSS3, Modern Vanilla JavaScript** | Responsive, accessible interface featuring custom CSS variables, flexbox/grid, and zero external JS dependencies. |
-| **Testing** | **Python unittest** | Automated regression and unit test suite covering file upload handling, all API endpoints, and fallback logic. |
+| **Trigger** | `GEMINI_API_KEY` configured and API reachable | API key missing, network unavailable, or rate-limited |
+| **API Protocol** | Google REST API (`x-goog-api-key` header) | Zero external calls; pure local Python processing |
+| **Retry Strategy** | 3 attempts with exponential backoff on HTTP 429/500/502/503/504 | Instantaneous execution with zero external dependencies |
+| **Resume Analysis** | Deep generative semantic parsing across 11 fields | Regex tokenizer scanning 50+ technology stacks |
+| **Job Description Matcher**| Nuanced contextual evaluation, skill extraction, and tailored bullet edits | Heuristic keyword density and overlap scoring |
+| **Interview Generator** | Role-tailored questions contextualized by resume projects | Curated question banks for top technical roles + generator |
+| **Answer Evaluation** | Multi-attribute scoring (0.0–10.0) with model answers | Heuristic length, clarity, and keyword-weighted scoring |
+| **Database Persistence** | Saved automatically to `careerpilot.db` | Saved automatically to `careerpilot.db` |
+| **User Experience** | Real-time AI badge indicator | Clear offline badge indicator; zero server crashes |
+
+---
+
+## Reliability & Security
+
+- **Server-Side API Key Handling**: The `GEMINI_API_KEY` is loaded strictly on the server side via environment variables. It is never exposed in client templates, scripts, or responses.
+- **Header Authentication (`x-goog-api-key`)**: REST requests pass the API key exclusively via HTTP request headers. Query parameters (`?key=...`) are prohibited, ensuring keys never leak in URLs or browser history.
+- **Smart Retry & Exponential Backoff**: Temporary server errors (`HTTP 429`, `500`, `502`, `503`, `504`) trigger up to 3 attempts with exponential backoff (2 seconds, then 5 seconds). Permanent client errors (`HTTP 400`, `401`, `403`, `404`) fail fast without unnecessary retries.
+- **Sensitive Log Redaction**: Server logging routines strip credentials, secret keys, and query parameters before writing diagnostic errors to standard error.
+- **Deterministic Offline Fallback**: If all retry attempts fail or network access is unavailable, the application gracefully degrades to local heuristic processing.
+- **SQL Injection Prevention**: Database queries use parameterized SQL statements (`?`) across all table operations.
+- **Upload Validation & Path Traversal Defense**: File uploads are restricted to `.pdf` format, sanitized with `secure_filename()`, validated for directory boundary containment, and enforced at a 16 MB maximum payload limit.
+- **Production Health Monitoring**: An unauthenticated `GET /health` endpoint returns JSON health status (`{"status": "ok", "service": "CareerPilot AI"}`) for cloud load balancers and uptime pingers.
+
+---
+
+## Job Description Matcher Details
+
+The Job Description Matcher compares an analyzed candidate resume against any target job posting through the `POST /job-match` endpoint.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Candidate
+    participant UI as Web Frontend
+    participant Server as Flask Server (/job-match)
+    participant Engine as Dual-Engine Analyzer
+    participant DB as SQLite Storage
+
+    User->>UI: Paste Target Job Description & Click Match
+    UI->>Server: POST /job-match (job_description, resume_analysis)
+    Server->>Server: Validate payload (length 20-25000 chars, resume present)
+    Server->>Engine: analyze_job_description()
+    alt Gemini Available
+        Engine->>Engine: Call Gemini REST with x-goog-api-key
+        alt Transient Failure
+            Engine->>Engine: Retry backoff (2s, 5s)
+        end
+    else Gemini Offline / Error
+        Engine->>Engine: heuristic_job_description_match()
+    end
+    Engine-->>Server: 8-Part Match Report
+    Server-->>UI: Return JSON match evaluation
+    UI-->>User: Render Match Score, Skill Gaps, Bullets & Prep Plan
+```
+
+### Generated Report Attributes
+1. **Resume vs Job Description Comparison**: Contextual comparison of candidate profile against job responsibilities.
+2. **0–100 Match Score**: Quantitative compatibility percentage with hiring tier categorization (*High Match*, *Moderate Match*, *Developing Match*).
+3. **Matching Skills**: Specific technical, framework, and domain skills confirmed on both sides.
+4. **Missing Skills**: Priority technologies and qualifications required by the job but absent from the resume.
+5. **Relevant Resume Strengths**: Highlighted candidate experiences that directly reinforce the target role.
+6. **Resume Improvement Suggestions**: Targeted revisions and keyword optimizations to enhance ATS screening performance.
+7. **Learning Recommendations**: Specific tools, frameworks, and concepts to study to bridge identified gaps.
+8. **Job-Specific Interview Questions**: Anticipated technical and situational interview questions drawn directly from the job description.
+9. **5-Step Preparation Plan**: Phased action checklist guiding the candidate through resume tuning, concept mastery, project building, interview practice, and final application submission.
+10. **Dual-Engine Execution**: Backed by live Google Gemini 3.6 Flash analysis with automatic fallback to local heuristic matching.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Backend Framework** | Python 3.10+ / Flask 3.0+ | WSGI application core, API routing, and controller logic |
+| **WSGI Server** | Gunicorn 21.2+ | Production multi-worker WSGI HTTP server |
+| **Generative AI** | Google Gemini 3.6 Flash | LLM inference via REST API with `x-goog-api-key` header auth |
+| **Document Parsing** | pypdf 4.0+ | Multi-page PDF plain text extraction and validation |
+| **Database** | SQLite 3 | Relational persistence with parameterized ACID transactions |
+| **Frontend** | Semantic HTML5, CSS3, Vanilla JS | Modern glassmorphic interface, responsive layout, zero framework bloat |
+| **Testing** | Python `unittest` | Native standard library test framework with 49 automated tests |
 
 ---
 
 ## Project Structure
 
-```
+```text
 CareerPilot-AI/
-│
-├── app.py                      # Core Flask application, route definitions, and security handlers
-├── analyzer.py                 # Resume parsing, Gemini API integrations, interview & career logic
-├── database.py                 # SQLite database initialization, schemas, and parameterized queries
-├── careerpilot.db              # Local SQLite database file (auto-generated, excluded in .gitignore)
-├── requirements.txt            # Python dependencies (Flask, pypdf, requests, python-dotenv)
-├── .env                        # Local environment configuration (API keys, secret keys - gitignored)
-├── .env.example                # Example environment template for new team members
-├── .gitignore                  # Git exclusions (.env, uploads/, __pycache__/, *.db)
-├── README.md                   # Comprehensive academic project documentation
-│
-├── templates/
-│   └── index.html              # Unified Single Page Application template (Steps 1 to 6)
-│
+├── .env.example              # Environment variables template
+├── .gitignore                # Protects secrets, databases, uploads, and caches
+├── .python-version           # Pinned Python version (3.11.9) for buildpacks
+├── LICENSE                   # MIT Open-Source License
+├── README.md                 # Product documentation and technical reference
+├── analyzer.py               # Dual-engine controller: Gemini REST API + Heuristic analyzer
+├── app.py                    # Flask application core, routes, WSGI entrypoint, API handlers
+├── database.py               # SQLite schema, parameterized CRUD, session management
+├── requirements.txt          # Production dependency manifest
+├── walkthrough.md            # Comprehensive development walkthrough and milestones
 ├── static/
-│   └── style.css               # Modern, clean CSS design system with responsive layouts
-│
+│   ├── favicon.svg           # Application SVG brand icon
+│   └── style.css             # Glassmorphic stylesheet, CSS tokens, responsive rules
+├── templates/
+│   └── index.html            # Single-page application interface and modals
 ├── tests/
-│   └── test_app.py             # 24 automated unit tests covering all routes, uploads, DB, and analyzers
-│
-└── uploads/                    # Server-side temporary storage for uploaded PDF resumes (auto-created)
+│   ├── __init__.py           # Test package initializer
+│   └── test_app.py           # Complete test suite containing 49 automated tests
+└── uploads/                  # Temporary upload directory (auto-created, git-ignored)
 ```
 
 ---
 
-## Prerequisites & Installation
+## Local Setup
 
-### 1. Prerequisites
-- **Operating System**: Windows 10/11, macOS, or Linux.
-- **Python**: Python 3.10 or higher installed. (On Windows, ensure the Python launcher `py` or `python` is added to your PATH).
+### Prerequisites
+- Python 3.10 or higher
+- Git
+- *(Optional)* Google Gemini API Key from [Google AI Studio](https://aistudio.google.com/)
 
-### 2. Clone or Navigate to Project
+### 1. Clone the Repository
 ```bash
-cd c:\Users\hp\OneDrive\Desktop\CareerPilot-AI
+git clone https://github.com/Prakashitha22/CareerPilot-AI.git
+cd CareerPilot-AI
 ```
 
-### 3. (Optional but Recommended) Create a Virtual Environment
+### 2. Set Up a Virtual Environment
 ```bash
 # Windows
-py -m venv venv
+python -m venv venv
 venv\Scripts\activate
 
 # macOS / Linux
@@ -272,47 +289,18 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 4. Install Dependencies
+### 3. Install Dependencies
 ```bash
-# Windows
-py -m pip install -r requirements.txt
-
-# macOS / Linux
 pip install -r requirements.txt
 ```
 
----
-
-## Configuration & Environment Variables
-
-Create a `.env` file in the root project directory:
-
+### 4. Configure Environment Variables
 ```bash
-# Windows PowerShell
-Copy-Item .env.example .env
-
-# macOS / Linux
 cp .env.example .env
 ```
+Populate `.env` with your settings (see [Environment Variables](#environment-variables)).
 
-Edit `.env`:
-
-```ini
-# Flask Configuration
-FLASK_SECRET_KEY=your_secure_random_session_secret_key_here
-
-# Google Gemini API Key (Optional)
-# Get a free key at: https://aistudio.google.com/
-# If left empty, CareerPilot AI operates automatically in offline demo mode.
-GEMINI_API_KEY=your_google_gemini_api_key_here
-```
-
----
-
-## Running the Application
-
-Start the Flask development server:
-
+### 5. Run the Application
 ```bash
 # Windows
 py app.py
@@ -320,142 +308,30 @@ py app.py
 # macOS / Linux
 python3 app.py
 ```
-
-You will see:
+Open your browser at:
+```text
+http://127.0.0.1:5000
 ```
-CareerPilot AI (Academic Software Project) is running!
-Open your browser and navigate to: http://127.0.0.1:5000
- * Serving Flask app 'app'
- * Debug mode: on
- * Running on http://127.0.0.1:5000
-```
-
-Open your browser and navigate to:  
-**`http://127.0.0.1:5000`**
 
 ---
 
-## Deployment Preparation
-
-CareerPilot AI is configured for smooth deployment to production cloud hosting platforms (such as **Render**, **Railway**, or containerized PaaS environments).
-
-### 1. Local Development vs. Production Execution
-
-- **Local Development Command** (runs local Flask dev server on `127.0.0.1:5000` with hot reloading):
-  ```bash
-  # Windows
-  py app.py
-
-  # macOS / Linux
-  python3 app.py
-  ```
-
-- **Production WSGI Command** (uses production-grade multi-worker Gunicorn server):
-  ```bash
-  gunicorn app:app
-  ```
-  Or specifying port binding and worker threads:
-  ```bash
-  gunicorn --bind 0.0.0.0:$PORT --workers 2 app:app
-  ```
-
-### 2. Cloud Environment Variables
-Configure the following variables in your hosting provider's dashboard:
+## Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `PORT` | Auto-provided | `5000` | Automatically assigned by cloud platforms (e.g. Render). `app.py` listens dynamically on this port. |
-| `FLASK_SECRET_KEY` | Recommended | Built-in fallback | Cryptographic secret used by Flask to sign session cookies. In production, set to a strong random string. |
-| `GEMINI_API_KEY` | Optional | Empty | Your Google Gemini API key. If omitted, the application runs in offline heuristic fallback mode without crashing. |
-| `FLASK_DEBUG` | Optional | `false` | Disable debug mode in production to avoid leaking internal traces. |
-
-### 3. API Key Security (Server-Side Only)
-- The `GEMINI_API_KEY` is loaded exclusively on the backend through `os.environ`.
-- **Zero Client Exposure**: The API key is never rendered in HTML templates, transmitted in JavaScript AJAX calls, stored in CSS, or included in client-side code.
-- **Git Protection**: `.env` and `careerpilot.db` are explicitly listed in `.gitignore` to prevent secret leakage to public Git repositories.
-- **Sanitized Notices**: Error handlers scrub third-party API exception strings to ensure URLs containing query parameters (`?key=...`) are never displayed to end users.
-
-### 4. Current SQLite Limitation for Cloud Deployment
-> [!IMPORTANT]
-> **Understanding Ephemeral Storage on PaaS Cloud Providers**:
-> - CareerPilot AI currently uses a lightweight local SQLite database (`careerpilot.db`).
-> - On cloud application platforms like Render (free tier), Railway, or Heroku, the server instances use **ephemeral (stateless) filesystems**.
-> - When a free cloud service spins down due to inactivity, restarts, or receives a new code deployment, the local disk is reset. Consequently, local SQLite database records will reset to an empty state unless a paid persistent volume mount is configured.
-> - While SQLite is ideal for local testing, college project grading, and offline demonstrations, production multi-user cloud persistence will be addressed in future milestones by migrating to a managed cloud database (such as PostgreSQL).
-
-### 5. Production Health Check Endpoint
-- **URL**: `GET /health`
-- **Response**:
-  ```json
-  {
-    "status": "ok",
-    "service": "CareerPilot AI"
-  }
-  ```
-- Designed for cloud uptime monitors and load balancer health probes without exposing database state or sensitive configuration.
+| `GEMINI_API_KEY` | Optional | *(None)* | Google AI Studio API key. If omitted, the offline heuristic engine is used. |
+| `GEMINI_MODEL` | Optional | `gemini-3.6-flash` | Gemini model endpoint identifier. |
+| `FLASK_SECRET_KEY` | Recommended | Built-in fallback | Secret key used by Flask to cryptographically sign session cookies. |
+| `FLASK_DEBUG` | Optional | `false` | Enables Flask debug mode for local development. |
+| `PORT` | Optional | `5000` | Port for dynamic binding on cloud hosting environments. |
 
 ---
 
-## End-to-End User Guide
+## Testing
 
-### Step 1: Upload & Extract Resume
-1. Drag and drop your PDF resume into the **Upload Resume** card or click to browse.
-2. Click **Extract Resume Text**.
-3. The extracted plain text appears in the preview panel with word and character metrics.
+The project includes an automated test suite containing **49 automated tests** located in `tests/test_app.py`.
 
-### Step 2: Generate AI Resume Intelligence
-1. Click the **Analyze Resume** button.
-2. The dashboard displays:
-   - Candidate profile overview and professional summary.
-   - Categorized technical and soft skills.
-   - Detected experience, projects, education, and certifications.
-   - Distinct strengths and missing skill recommendations.
-   - Suggested job roles with match percentages and justification.
-   - Actionable resume improvement tips.
-3. This analysis is **automatically saved to your local SQLite database**.
-
-### Step 3: Practice with the AI Interview Coach
-1. Select your target job role or type a custom role.
-2. Click **Start Interview**.
-3. Answer 5 structured questions (Technical Fundamentals, Architecture, Project Experience, Debugging, and Behavioral STAR).
-4. Review instant scoring (out of 10.0), positive highlights, constructive suggestions, and expandable **10/10 Model Answers**.
-5. Upon completion, review the **Interview Performance Report** detailing your hiring tier and full transcript.
-6. The entire session is **automatically saved to your local SQLite database**.
-
-### Step 4: Explore Career Intelligence & Growth Roadmap
-1. Navigate to the **Career Intelligence Dashboard**.
-2. Review your **Career Readiness Score** (50% resume alignment + 50% interview score).
-3. Inspect your **Skill Gap Analysis** and adjacent **Role Matching** tracks.
-4. Follow the **5-Step Personalized Learning Roadmap** (Weeks 1 to 8+).
-5. Explore **Portfolio Project Recommendations** and the **Resume Checklist**.
-6. The calibrated report is **automatically saved to your local SQLite database**.
-
-### Step 5 & 6: Career History & Saved Records
-1. Click **📚 Career History** in the navigation bar to jump directly to saved activities.
-2. Use filter pills to filter between **All Activities**, **Resume Analyses**, **Mock Interviews**, and **Career Reports**.
-3. Click **👁️ View Record** on any card to view detailed historical information in a readable format.
-4. Click **🗑️ Clear History** if you wish to safely wipe your session records with confirmation.
-
----
-
-## Dual-Engine & Offline Fallback Architecture
-
-| Condition | Primary Mode (Gemini 3.6 Flash) | Fallback Mode (Smart Heuristic Engine) |
-|---|---|---|
-| **Trigger** | `GEMINI_API_KEY` present and API reachable | `GEMINI_API_KEY` missing, invalid, or API rate-limited |
-| **Resume Analysis** | High-level generative synthesis across 11 fields | Regex tokenizer scanning 50+ tech stacks and academic patterns |
-| **Interview Questions** | Contextual questions generated from resume text | Curated question banks for top roles + synthesized custom prompts |
-| **Evaluation & Scoring** | Multi-attribute generative rubric (0.0 to 10.0) | Heuristic scoring based on depth, keywords, clarity, and model answers |
-| **Persistence** | Automatically saved to `careerpilot.db` | Automatically saved to `careerpilot.db` |
-| **User Experience** | Instant response with live AI badge | Instant response with clear offline demo badge; zero user crashes |
-
----
-
-## Automated Testing Suite
-
-The project includes an automated test suite located in `tests/test_app.py` using Python's standard `unittest` library.
-
-### Running the Tests
+### Running the Full Test Suite
 ```bash
 # Windows
 py -m unittest discover -s tests -v
@@ -464,64 +340,55 @@ py -m unittest discover -s tests -v
 python3 -m unittest discover -s tests -v
 ```
 
-### Test Coverage Breakdown (31 Automated Tests)
-- `test_homepage_loads`: Confirms HTTP 200 and validates presence of all 5 UI sections.
-- `test_upload_no_file`: Verifies missing file payload is handled with a clean flash redirect.
-- `test_upload_empty_filename`: Verifies empty file submissions are rejected.
-- `test_upload_invalid_extension`: Ensures non-PDF files (.docx, .png) are rejected.
-- `test_upload_corrupted_pdf`: Proves corrupted/malformed binary uploads are safely caught without 500 crashes.
-- `test_upload_valid_pdf`: Confirms valid PDF extraction and text preview generation.
-- `test_analyze_empty_text`: Confirms `/analyze` returns HTTP 400 Bad Request on empty payloads.
-- `test_analyze_valid_resume`: Verifies all 11 structural analysis fields are generated.
-- `test_interview_start`: Confirms 5 tailored questions are generated with proper IDs and contexts.
-- `test_interview_evaluate`: Validates score generation (0–10) and feedback attributes.
-- `test_interview_evaluate_empty_answer`: Confirms empty answers receive score 0.0 without server errors.
-- `test_interview_summary`: Confirms session aggregation and performance tier assignment.
-- `test_career_intelligence_with_interview`: Validates combined 50/50 readiness calculation and roadmap output.
-- `test_career_intelligence_resume_only`: Verifies graceful fallback to resume-only readiness when interview has not yet been taken.
-- `test_offline_fallback_guarantee`: Ensures offline heuristic engine functions without throwing exceptions.
-- `test_404_handler`: Verifies graceful error redirection for web users and clean JSON for API clients.
-- `test_database_initialization`: Verifies all 4 SQLite tables are created on startup.
-- `test_candidate_crud`: Verifies candidate creation, retrieval, and name updates.
-- `test_save_and_retrieve_resume_analysis`: Validates resume persistence and JSON field deserialization.
-- `test_save_and_retrieve_interview_session`: Validates interview persistence and Q&A history retrieval.
-- `test_save_and_retrieve_career_report`: Validates career report persistence and readiness storage.
-- `test_candidate_history_aggregation_and_clear`: Confirms combined chronological history and candidate-scoped clearing.
-- `test_api_history_routes`: Tests `/api/history`, `/api/history/<type>/<id>`, and `/api/history/clear`.
-- `test_end_to_end_auto_persistence`: Confirms that completing analysis, interview, and career intelligence automatically creates database records.
-- `test_health_endpoint`: Validates production `GET /health` endpoint returns HTTP 200 without exposing secrets.
-- `test_production_startup_configuration`: Confirms the `app` WSGI callable is valid for Gunicorn execution (`gunicorn app:app`).
-- `test_port_configuration_logic`: Validates dynamic `$PORT` environment variable binding for cloud providers.
-- `test_gemini_model_configuration`: Verifies the Gemini model configuration defaults to current stable `gemini-3.6-flash`.
-- `test_sanitize_gemini_message`: Verifies API key and sensitive URL query parameter redaction.
-- `test_log_gemini_diagnostic`: Confirms server-side diagnostic logging of model, exception, HTTP status, and sanitized message.
-- `test_analyze_resume_diagnostic_fallback`: Verifies graceful fallback and zero diagnostic leakage to client payloads.
+### Test Suite Breakdown (49 Passing Tests)
+- **Upload & PDF Ingestion (5 tests)**: Route accessibility, multi-page parsing, missing file redirection, empty filename validation, invalid extension rejection, and corrupted PDF error handling.
+- **AI Resume Intelligence (2 tests)**: Empty payload validation and 11-dimension candidate intelligence schema extraction.
+- **Job Description Matcher (6 tests)**: Homepage UI integration, empty description validation, oversized payload rejection, missing resume prerequisite validation, live Gemini report generation, offline heuristic matching, and graceful fallback.
+- **AI Interview Coach (7 tests)**: 5-question generation, per-question evaluation, empty answer handling, performance summary aggregation, header authentication validation, and offline fallback.
+- **Career Intelligence (2 tests)**: Combined 50/50 readiness calculation and resume-only readiness fallback.
+- **SQLite Persistence (8 tests)**: Schema initialization, candidate CRUD, resume analysis saving/retrieval, interview saving/retrieval, career report saving/retrieval, history aggregation/clear, REST history API, and end-to-end auto-persistence.
+- **Gemini REST, Security & Retry Handling (16 tests)**: Model identifier configuration, endpoint URL and `x-goog-api-key` header formation, sensitive URL redaction, diagnostic logging, diagnostic payload isolation, single execution on HTTP 200, retry on HTTP 503 succeeding on attempt 2, retry exhaustion on persistent 503, fast failure on HTTP 400/401/403, credential exclusion from stderr logs, and offline fallback guarantees.
+- **Deployment & Production Readiness (3 tests)**: Health check endpoint verification, Gunicorn WSGI callable validation, and dynamic `$PORT` environment variable binding.
 
 ---
 
-## Security & Robustness Practices
+## Deployment
 
-1. **SQL Injection Protection**: All SQLite queries in `database.py` use parameterized queries (`?`). User inputs are never directly concatenated into SQL strings.
-2. **Path Traversal Protection**: Uploaded file destinations are sanitized using `secure_filename()` and validated against directory traversal attacks via `os.path.abspath()` checks.
-3. **File Size Enforcement**: Requests exceeding the 16MB limit are intercepted via Flask's `@app.errorhandler(413)`.
-4. **No Credential Leakage**: API keys and backend stack traces are strictly confined to the server; exception handlers return sanitized, user-friendly error notices.
-5. **Database Error Resilience**: Database write failures are caught in non-blocking try-except blocks, ensuring that transient database issues never crash user requests or break offline fallbacks.
+CareerPilot AI is configured for automated cloud deployment on **Render**, **Railway**, or containerized hosts.
+
+### Render Configuration
+1. Connect your GitHub repository to Render.
+2. Select **Web Service** with the **Python** environment.
+3. Configure build and startup commands:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+   - **Health Check Path**: `/health`
+4. Set environment variables in the Render dashboard:
+   - `GEMINI_API_KEY`: Your Google AI Studio API key *(Optional)*
+   - `GEMINI_MODEL`: `gemini-3.6-flash`
+   - `FLASK_SECRET_KEY`: A cryptographically secure random string
+   - `PYTHON_VERSION`: `3.11.9`
 
 ---
 
-## Future Scope & Enhancements
+## Limitations
 
-For prospective development and final-year academic expansion:
-- **Voice & Speech-to-Text Coaching**: Browser Web Speech API integration to enable verbal mock interviews with speech-to-text transcription.
-- **Exportable PDF Career Reports**: Generation of downloadable PDF career audit reports summarizing candidate readiness and improvement plans.
-- **Multi-Candidate Profile Switcher**: Adding optional profile switching for campus lab computers.
-- **LinkedIn & GitHub Integration**: Automated profile synchronization to complement resume data.
+- **Ephemeral Cloud Storage**: On free-tier cloud platforms (e.g. Render free tier), instances run on ephemeral filesystems. The local SQLite database resets upon instance spin-down or redeployment.
+- **Synchronous LLM Calls**: Large generative requests currently run synchronously on request threads; high-concurrency environments would benefit from an asynchronous background task queue.
+- **Text-Only PDF Extraction**: Complex graphical resumes, multi-column tables, or scanned image PDFs without selectable text are subject to OCR limitations.
 
 ---
 
-## Academic Project Information
+## Future Improvements
 
-- **Project Title**: CareerPilot AI — AI Resume & Interview Coach
-- **Primary Domain**: Artificial Intelligence, Relational Databases & Web Development
-- **Framework & Storage**: Python / Flask / SQLite / RESTful Web Services
-- **Designation**: B.Tech / Academic Software Engineering Project
+- [ ] **Managed Cloud Database**: Add PostgreSQL connection support for persistent multi-user storage in cloud deployments.
+- [ ] **Voice Mock Interviews**: Integrate the Web Speech API for verbal question delivery and spoken answer transcription.
+- [ ] **Exportable PDF Reports**: Allow candidates to download a formatted PDF career audit report containing their readiness score, skill gaps, and learning roadmap.
+- [ ] **Asynchronous Task Queue**: Introduce Celery or Redis Queue for non-blocking background analysis of large documents.
+- [ ] **OAuth Authentication**: Provide optional GitHub and Google single sign-on for cross-device history synchronization.
+
+---
+
+## License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
