@@ -6,6 +6,8 @@ import requests
 def get_gemini_api_key():
     return os.environ.get('GEMINI_API_KEY', '').strip()
 
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash').strip()
+
 # ==========================================
 # 1. RESUME ANALYSIS FUNCTIONS (STEP 2)
 # ==========================================
@@ -244,7 +246,7 @@ def smart_heuristic_analysis(text):
 
 def call_gemini_api(api_key, resume_text):
     """Call Google Gemini REST API with structured JSON output schema."""
-    url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}'
+    url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
     
     prompt = f"""You are an expert technical recruiter and resume coach.
 Analyze the following resume text and provide a comprehensive, strictly structured JSON response.
@@ -638,7 +640,7 @@ def generate_interview_questions(role, resume_text=""):
     api_key = get_gemini_api_key()
     if api_key:
         try:
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}'
+            url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
             prompt = f"""You are a senior technical interviewer hiring for the role of: {role}.
 Generate exactly 5 realistic, high-quality interview questions for this candidate.
 {f"Candidate's Resume Context: {resume_text[:1200]}" if resume_text else ""}
@@ -785,7 +787,7 @@ def evaluate_interview_answer(role, question, answer, question_type="Technical")
     api_key = get_gemini_api_key()
     if api_key:
         try:
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}'
+            url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
             prompt = f"""You are an expert technical interviewer evaluating a candidate for the role: {role}.
 
 QUESTION ({question_type}):
@@ -863,7 +865,7 @@ def generate_interview_summary(role, history):
     api_key = get_gemini_api_key()
     if api_key and len(history) >= 3:
         try:
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}'
+            url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
             history_summary = []
             for idx, h in enumerate(history):
                 history_summary.append(f"Q{idx+1}: {h.get('question')} | Score: {h.get('evaluation', {}).get('score')}/10 | Feedback: {h.get('evaluation', {}).get('what_could_be_improved')}")

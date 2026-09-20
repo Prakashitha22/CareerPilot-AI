@@ -540,5 +540,9 @@ class CareerPilotTestCase(unittest.TestCase):
         self.assertIsInstance(default_port, int)
         self.assertGreater(default_port, 0)
 
+    def test_gemini_model_configuration(self):
+        """Verify the Gemini model configuration defaults to current stable gemini-2.5-flash."""
+        self.assertEqual(analyzer.GEMINI_MODEL, 'gemini-2.5-flash')
+
 if __name__ == '__main__':
     unittest.main()
