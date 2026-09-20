@@ -94,16 +94,27 @@ test_upload_empty_filename (test_app.CareerPilotTestCase.test_upload_empty_filen
 test_upload_invalid_extension (test_app.CareerPilotTestCase.test_upload_invalid_extension) ... ok
 test_upload_no_file (test_app.CareerPilotTestCase.test_upload_no_file) ... ok
 test_upload_valid_pdf (test_app.CareerPilotTestCase.test_upload_valid_pdf) ... ok
+test_gemini_model_configuration (test_app.CareerPilotTestCase.test_gemini_model_configuration) ... ok
 
 ----------------------------------------------------------------------
-Ran 27 tests in 0.976s
+Ran 28 tests in 0.734s
 
 OK (100% Pass Rate)
 ```
 
 ---
 
-## 3. How to Run the Application
+## 3. Gemini 2.5 Flash Model Update
+
+- Upgraded Generative AI backend model from deprecated `gemini-2.0-flash` to current stable `gemini-2.5-flash`.
+- Added configurable `GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash').strip()` in [`analyzer.py`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/analyzer.py).
+- Preserved all `GEMINI_API_KEY` handling, structured JSON outputs, error handling, and smart heuristic offline fallback guarantees.
+- Updated UI badges in [`templates/index.html`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/templates/index.html) and documentation in [`README.md`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/README.md).
+- Added `test_gemini_model_configuration` to automated test suite (28/28 tests passing).
+
+---
+
+## 4. How to Run the Application
 
 ### Local Development (Windows)
 ```powershell
