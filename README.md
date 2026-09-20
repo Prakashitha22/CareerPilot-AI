@@ -4,7 +4,7 @@ An intelligent, web-based career acceleration and interview preparation platform
 
 CareerPilot AI bridges the gap between static resume screening and technical interview performance. It provides automated resume text extraction, structured AI candidate analysis, an interactive 5-question technical and behavioral mock interview coach with real-time scoring, an executive career intelligence dashboard with personalized 5-step learning roadmaps, and a **persistent SQLite career history database** that preserves student progress across sessions.
 
-Designed and engineered as a comprehensive academic college software project, the platform features a **dual-engine architecture** that seamlessly toggles between live Google Gemini 2.5 Flash REST APIs and high-precision offline heuristic fallback engines, ensuring 100% operational reliability during offline presentations, evaluations, and demonstrations.
+Designed and engineered as a comprehensive academic college software project, the platform features a **dual-engine architecture** that seamlessly toggles between live Google Gemini 3.6 Flash REST APIs and high-precision offline heuristic fallback engines, ensuring 100% operational reliability during offline presentations, evaluations, and demonstrations.
 
 ---
 
@@ -133,7 +133,7 @@ CareerPilot AI solves these problems through an integrated, reliable, and beginn
 +------------------------------------+       +------------------------------------+
 |  INTELLIGENCE ENGINE (analyzer.py) |       |     DATABASE LAYER (database.py)   |
 |                                    |       |                                    |
-|   [Google Gemini 2.5 Flash]        |       |   [SQLite Engine: careerpilot.db]  |
+|   [Google Gemini 3.6 Flash]        |       |   [SQLite Engine: careerpilot.db]  |
 |   - Structured JSON output         |       |   - Parameterized SQL queries      |
 |   - Low temperature (0.2)          |       |   - Tables:                        |
 |                                    |       |     • candidates                   |
@@ -213,7 +213,7 @@ CareerPilot AI uses Python's built-in `sqlite3` module. No external database ser
 | **Backend Framework** | **Python 3.10+ / Flask 3.0+** | Lightweight WSGI web application framework managing routing, requests, and JSON APIs. |
 | **Database Engine** | **SQLite 3 (Built-in `sqlite3`)** | Serverless, zero-configuration relational database storing candidates and session records in `careerpilot.db`. |
 | **PDF Extraction Engine** | **pypdf 4.0+** | Pure-Python PDF extraction library handling multi-page parsing, metadata, and corruption exceptions. |
-| **Generative AI** | **Google Gemini 2.5 Flash REST API** | Cloud-based generative AI utilizing structured JSON generation schema for natural language reasoning. |
+| **Generative AI** | **Google Gemini 3.6 Flash REST API** | Cloud-based generative AI utilizing structured JSON generation schema for natural language reasoning. |
 | **Fallback Intelligence** | **Native Heuristic Rule Engine** | Python pattern matching, regex tokenizers, curated question databases, and scoring algorithms. |
 | **Configuration** | **python-dotenv** | Secure management of environment variables and sensitive credentials. |
 | **Frontend UI** | **HTML5, CSS3, Modern Vanilla JavaScript** | Responsive, accessible interface featuring custom CSS variables, flexbox/grid, and zero external JS dependencies. |
@@ -440,7 +440,7 @@ Configure the following variables in your hosting provider's dashboard:
 
 ## Dual-Engine & Offline Fallback Architecture
 
-| Condition | Primary Mode (Gemini 2.5 Flash) | Fallback Mode (Smart Heuristic Engine) |
+| Condition | Primary Mode (Gemini 3.6 Flash) | Fallback Mode (Smart Heuristic Engine) |
 |---|---|---|
 | **Trigger** | `GEMINI_API_KEY` present and API reachable | `GEMINI_API_KEY` missing, invalid, or API rate-limited |
 | **Resume Analysis** | High-level generative synthesis across 11 fields | Regex tokenizer scanning 50+ tech stacks and academic patterns |
@@ -492,7 +492,7 @@ python3 -m unittest discover -s tests -v
 - `test_health_endpoint`: Validates production `GET /health` endpoint returns HTTP 200 without exposing secrets.
 - `test_production_startup_configuration`: Confirms the `app` WSGI callable is valid for Gunicorn execution (`gunicorn app:app`).
 - `test_port_configuration_logic`: Validates dynamic `$PORT` environment variable binding for cloud providers.
-- `test_gemini_model_configuration`: Verifies the Gemini model configuration defaults to current stable `gemini-2.5-flash`.
+- `test_gemini_model_configuration`: Verifies the Gemini model configuration defaults to current stable `gemini-3.6-flash`.
 - `test_sanitize_gemini_message`: Verifies API key and sensitive URL query parameter redaction.
 - `test_log_gemini_diagnostic`: Confirms server-side diagnostic logging of model, exception, HTTP status, and sanitized message.
 - `test_analyze_resume_diagnostic_fallback`: Verifies graceful fallback and zero diagnostic leakage to client payloads.

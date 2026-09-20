@@ -11,7 +11,7 @@ logger = logging.getLogger('analyzer')
 def get_gemini_api_key():
     return os.environ.get('GEMINI_API_KEY', '').strip()
 
-GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash').strip()
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.6-flash').strip()
 
 def sanitize_gemini_message(msg, api_key=None):
     """

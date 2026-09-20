@@ -107,10 +107,10 @@ OK (100% Pass Rate)
 
 ---
 
-## 3. Gemini 2.5 Flash Model Update
+## 3. Gemini 3.6 Flash Model Update
 
-- Upgraded Generative AI backend model from deprecated `gemini-2.0-flash` to current stable `gemini-2.5-flash`.
-- Added configurable `GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash').strip()` in [`analyzer.py`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/analyzer.py).
+- Upgraded Generative AI backend model to current stable `gemini-3.6-flash`.
+- Added configurable `GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.6-flash').strip()` in [`analyzer.py`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/analyzer.py).
 - Preserved all `GEMINI_API_KEY` handling, structured JSON outputs, error handling, and smart heuristic offline fallback guarantees.
 - Updated UI badges in [`templates/index.html`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/templates/index.html) and documentation in [`README.md`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/README.md).
 
@@ -123,7 +123,7 @@ When Gemini requests fail in production or cloud environments (e.g., Render), [`
   1. Exception Type (e.g. `HTTPError`, `Timeout`, `ConnectionError`)
   2. HTTP Status Code (e.g. `HTTP 400`, `HTTP 404`, `HTTP 429`)
   3. Short Sanitized Error Message from Google's response
-  4. Current Gemini Model (`gemini-2.5-flash`)
+  4. Current Gemini Model (`gemini-3.6-flash`)
 - **Strict Key Redaction**: `sanitize_gemini_message` removes and redacts any API key or `key=` query parameter. `GEMINI_API_KEY` is never logged or exposed.
 - **Zero Client Leakage**: Diagnostic details are logged exclusively to server stderr / application logs and are never returned to the browser.
 - **Automated Tests**: Added unit tests `test_sanitize_gemini_message`, `test_log_gemini_diagnostic`, and `test_analyze_resume_diagnostic_fallback` (31/31 tests passing).

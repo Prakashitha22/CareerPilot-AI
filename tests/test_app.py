@@ -542,13 +542,13 @@ class CareerPilotTestCase(unittest.TestCase):
         self.assertGreater(default_port, 0)
 
     def test_gemini_model_configuration(self):
-        """Verify the Gemini model configuration defaults to current stable gemini-2.5-flash."""
-        self.assertEqual(analyzer.GEMINI_MODEL, 'gemini-2.5-flash')
+        """Verify the Gemini model configuration defaults to current stable gemini-3.6-flash."""
+        self.assertEqual(analyzer.GEMINI_MODEL, 'gemini-3.6-flash')
 
     def test_sanitize_gemini_message(self):
         """Verify sanitize_gemini_message thoroughly redacts API keys and URL params."""
         fake_key = "AIzaSySecretFakeApiKey1234567890123"
-        url_with_key = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={fake_key}"
+        url_with_key = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={fake_key}"
         sanitized = analyzer.sanitize_gemini_message(url_with_key, api_key=fake_key)
         self.assertNotIn(fake_key, sanitized)
         self.assertIn("key=[REDACTED]", sanitized)
@@ -567,7 +567,7 @@ class CareerPilotTestCase(unittest.TestCase):
         mock_response.json.return_value = {
             "error": {
                 "code": 404,
-                "message": f"models/gemini-2.5-flash not found. url key={fake_key}",
+                "message": f"models/gemini-3.6-flash not found. url key={fake_key}",
                 "status": "NOT_FOUND"
             }
         }
@@ -584,7 +584,7 @@ class CareerPilotTestCase(unittest.TestCase):
             self.assertIn(f"Model: {analyzer.GEMINI_MODEL}", log_output)
             self.assertIn("Exception: Exception", log_output)
             self.assertIn("Status: HTTP 404", log_output)
-            self.assertIn("Message: models/gemini-2.5-flash not found", log_output)
+            self.assertIn("Message: models/gemini-3.6-flash not found", log_output)
 
             # Security: ensure secret is completely absent
             self.assertNotIn(fake_key, log_output)
