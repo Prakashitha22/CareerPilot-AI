@@ -107,26 +107,35 @@ OK (100% Pass Rate)
 
 ---
 
-## 3. Gemini 3.6 Flash Model Update
+## 3. Gemini 3.6 Flash & REST Header Authentication Update
 
-- Upgraded Generative AI backend model to current stable `gemini-3.6-flash`.
-- Added configurable `GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.6-flash').strip()` in [`analyzer.py`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/analyzer.py).
-- Preserved all `GEMINI_API_KEY` handling, structured JSON outputs, error handling, and smart heuristic offline fallback guarantees.
-- Updated UI badges in [`templates/index.html`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/templates/index.html) and documentation in [`README.md`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/README.md).
+- **Active Stable Model**: `gemini-3.6-flash` (configurable via `GEMINI_MODEL` environment variable).
+- **Google REST Authentication via HTTP Header**:
+  - Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent`
+  - URL never contains `?key=` or raw API keys.
+  - Authentication header: `x-goog-api-key: <GEMINI_API_KEY>`
+  - Request headers: `'Content-Type': 'application/json'`
+- **Payload Compatibility**:
+  - Deprecated sampling parameters (`temperature`, `top_p`, `top_k`) removed from `generationConfig`.
+  - Structured JSON response enforced via `'generationConfig': {'responseMimeType': 'application/json'}`.
+- **Consistent Implementation**:
+  - Applied across all 4 Gemini features: Resume Analysis, Interview Question Generation, Answer Evaluation, and Session Summary.
+- **Complete Fallback & Diagnostic Security**:
+  - If the Gemini API request fails or is unreachable, the system gracefully logs safe sanitized diagnostics (exception type, HTTP status, sanitized error, model) without leaking secrets, and returns offline heuristic results seamlessly.
 
 ---
 
-## 4. Safe Server-Side Diagnostic Logging
+## 4. Automated Test Suite (35/35 Tests Passing)
 
-When Gemini requests fail in production or cloud environments (e.g., Render), [`analyzer.py`](file:///c:/Users/hp/OneDrive/Desktop/CareerPilot-AI/analyzer.py) now provides structured, safe server-side diagnostics:
-- **Logged Attributes Only**:
-  1. Exception Type (e.g. `HTTPError`, `Timeout`, `ConnectionError`)
-  2. HTTP Status Code (e.g. `HTTP 400`, `HTTP 404`, `HTTP 429`)
-  3. Short Sanitized Error Message from Google's response
-  4. Current Gemini Model (`gemini-3.6-flash`)
-- **Strict Key Redaction**: `sanitize_gemini_message` removes and redacts any API key or `key=` query parameter. `GEMINI_API_KEY` is never logged or exposed.
-- **Zero Client Leakage**: Diagnostic details are logged exclusively to server stderr / application logs and are never returned to the browser.
-- **Automated Tests**: Added unit tests `test_sanitize_gemini_message`, `test_log_gemini_diagnostic`, and `test_analyze_resume_diagnostic_fallback` (31/31 tests passing).
+The test suite now has **35 comprehensive unit tests** in `tests/test_app.py`:
+- `test_gemini_model_configuration`: Verifies `GEMINI_MODEL` defaults to `gemini-3.6-flash`.
+- `test_gemini_endpoint_and_headers_structure`: Verifies `get_gemini_endpoint` and `get_gemini_headers`.
+- `test_call_gemini_api_uses_header_auth_and_no_key_in_url`: Asserts `x-goog-api-key` header is sent, URL has no key, and sampling params are removed.
+- `test_interview_features_use_header_auth_and_no_key_in_url`: Asserts interview features use header auth and clean payloads.
+- `test_sanitize_gemini_message`: Verifies redaction of API keys from URLs, error messages, and headers.
+- `test_log_gemini_diagnostic`: Verifies safe diagnostic logging without leaking secrets.
+- `test_analyze_resume_diagnostic_fallback`: Verifies offline fallback on resume analysis failure.
+- `test_interview_gemini_failure_fallback`: Verifies offline fallback across interview questions, evaluation, and summary.
 
 ---
 

@@ -13,6 +13,17 @@ def get_gemini_api_key():
 
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.6-flash').strip()
 
+def get_gemini_endpoint():
+    """Return the Google Gemini REST API generateContent endpoint for the active model."""
+    return f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
+
+def get_gemini_headers(api_key):
+    """Return standard HTTP headers for Google Gemini REST API authentication."""
+    return {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': api_key
+    }
+
 def sanitize_gemini_message(msg, api_key=None):
     """
     Remove or redact API keys from URLs, error messages, and trace strings.
@@ -27,6 +38,8 @@ def sanitize_gemini_message(msg, api_key=None):
     msg = re.sub(r'([?&]key=)[^&\s]+', r'\1[REDACTED]', msg)
     # Redact standard Google API key patterns (e.g. AIzaSy...)
     msg = re.sub(r'AIza[0-9A-Za-z-_]{35}', '[REDACTED_API_KEY]', msg)
+    # Redact header occurrences if serialized in messages
+    msg = re.sub(r'(x-goog-api-key[\'":\s]+)[^\s,\'"}]+', r'\1[REDACTED_API_KEY]', msg, flags=re.IGNORECASE)
     return msg
 
 def log_gemini_diagnostic(exc, operation="resume_analysis"):
@@ -317,7 +330,8 @@ def smart_heuristic_analysis(text):
 
 def call_gemini_api(api_key, resume_text):
     """Call Google Gemini REST API with structured JSON output schema."""
-    url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
+    url = get_gemini_endpoint()
+    headers = get_gemini_headers(api_key)
     
     prompt = f"""You are an expert technical recruiter and resume coach.
 Analyze the following resume text and provide a comprehensive, strictly structured JSON response.
@@ -389,12 +403,11 @@ Return ONLY valid JSON matching this exact structure:
             }
         ],
         'generationConfig': {
-            'responseMimeType': 'application/json',
-            'temperature': 0.2
+            'responseMimeType': 'application/json'
         }
     }
 
-    response = requests.post(url, json=payload, timeout=20)
+    response = requests.post(url, headers=headers, json=payload, timeout=20)
     response.raise_for_status()
     res_data = response.json()
     
@@ -712,7 +725,8 @@ def generate_interview_questions(role, resume_text=""):
     api_key = get_gemini_api_key()
     if api_key:
         try:
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
+            url = get_gemini_endpoint()
+            headers = get_gemini_headers(api_key)
             prompt = f"""You are a senior technical interviewer hiring for the role of: {role}.
 Generate exactly 5 realistic, high-quality interview questions for this candidate.
 {f"Candidate's Resume Context: {resume_text[:1200]}" if resume_text else ""}
@@ -738,9 +752,9 @@ Return ONLY valid JSON:
 """
             payload = {
                 'contents': [{'parts': [{'text': prompt}]}],
-                'generationConfig': {'responseMimeType': 'application/json', 'temperature': 0.3}
+                'generationConfig': {'responseMimeType': 'application/json'}
             }
-            res = requests.post(url, json=payload, timeout=20)
+            res = requests.post(url, headers=headers, json=payload, timeout=20)
             res.raise_for_status()
             raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
             raw_text = re.sub(r'^```json\s*', '', raw_text.strip())
@@ -859,7 +873,8 @@ def evaluate_interview_answer(role, question, answer, question_type="Technical")
     api_key = get_gemini_api_key()
     if api_key:
         try:
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
+            url = get_gemini_endpoint()
+            headers = get_gemini_headers(api_key)
             prompt = f"""You are an expert technical interviewer evaluating a candidate for the role: {role}.
 
 QUESTION ({question_type}):
@@ -881,9 +896,9 @@ Evaluate this response objectively and return ONLY valid JSON matching this exac
 """
             payload = {
                 'contents': [{'parts': [{'text': prompt}]}],
-                'generationConfig': {'responseMimeType': 'application/json', 'temperature': 0.2}
+                'generationConfig': {'responseMimeType': 'application/json'}
             }
-            res = requests.post(url, json=payload, timeout=20)
+            res = requests.post(url, headers=headers, json=payload, timeout=20)
             res.raise_for_status()
             raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
             raw_text = re.sub(r'^```json\s*', '', raw_text.strip())
@@ -938,7 +953,8 @@ def generate_interview_summary(role, history):
     api_key = get_gemini_api_key()
     if api_key and len(history) >= 3:
         try:
-            url = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}'
+            url = get_gemini_endpoint()
+            headers = get_gemini_headers(api_key)
             history_summary = []
             for idx, h in enumerate(history):
                 history_summary.append(f"Q{idx+1}: {h.get('question')} | Score: {h.get('evaluation', {}).get('score')}/10 | Feedback: {h.get('evaluation', {}).get('what_could_be_improved')}")
@@ -957,9 +973,9 @@ Provide a concise, strictly structured JSON summary:
 """
             payload = {
                 'contents': [{'parts': [{'text': prompt}]}],
-                'generationConfig': {'responseMimeType': 'application/json', 'temperature': 0.2}
+                'generationConfig': {'responseMimeType': 'application/json'}
             }
-            res = requests.post(url, json=payload, timeout=20)
+            res = requests.post(url, headers=headers, json=payload, timeout=20)
             res.raise_for_status()
             raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
             raw_text = re.sub(r'^```json\s*', '', raw_text.strip())

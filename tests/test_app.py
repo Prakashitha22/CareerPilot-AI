@@ -545,6 +545,96 @@ class CareerPilotTestCase(unittest.TestCase):
         """Verify the Gemini model configuration defaults to current stable gemini-3.6-flash."""
         self.assertEqual(analyzer.GEMINI_MODEL, 'gemini-3.6-flash')
 
+    def test_gemini_endpoint_and_headers_structure(self):
+        """Verify get_gemini_endpoint and get_gemini_headers conform to Google REST requirements."""
+        fake_key = "AIzaSySecretApiKeyHeaderTest12345"
+        endpoint = analyzer.get_gemini_endpoint()
+        self.assertEqual(
+            endpoint,
+            f"https://generativelanguage.googleapis.com/v1beta/models/{analyzer.GEMINI_MODEL}:generateContent"
+        )
+        self.assertNotIn("?key=", endpoint)
+        self.assertNotIn(fake_key, endpoint)
+
+        headers = analyzer.get_gemini_headers(fake_key)
+        self.assertEqual(headers.get("Content-Type"), "application/json")
+        self.assertEqual(headers.get("x-goog-api-key"), fake_key)
+
+    def test_call_gemini_api_uses_header_auth_and_no_key_in_url(self):
+        """Verify call_gemini_api uses x-goog-api-key header and removes deprecated sampling params."""
+        fake_key = "AIzaSySecretApiKeyHeaderTest12345"
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {"text": '{"candidate_name": "Test Candidate", "summary": "Experienced engineer", "technical_skills": ["Python"]}'}
+                        ]
+                    }
+                }
+            ]
+        }
+
+        with patch('requests.post', return_value=mock_response) as mock_post:
+            result = analyzer.call_gemini_api(fake_key, "Sample Resume Content")
+
+            self.assertTrue(mock_post.called)
+            called_url = mock_post.call_args[0][0]
+            called_headers = mock_post.call_args[1].get('headers', {})
+            called_payload = mock_post.call_args[1].get('json', {})
+
+            # 1. API key is NOT in URL
+            self.assertNotIn("?key=", called_url)
+            self.assertNotIn(fake_key, called_url)
+            self.assertEqual(
+                called_url,
+                f"https://generativelanguage.googleapis.com/v1beta/models/{analyzer.GEMINI_MODEL}:generateContent"
+            )
+
+            # 2. x-goog-api-key header is used
+            self.assertEqual(called_headers.get('x-goog-api-key'), fake_key)
+            self.assertEqual(called_headers.get('Content-Type'), 'application/json')
+
+            # 3. Sampling parameters (temperature, top_p, top_k) removed from generationConfig
+            gen_config = called_payload.get('generationConfig', {})
+            self.assertNotIn('temperature', gen_config)
+            self.assertNotIn('top_p', gen_config)
+            self.assertNotIn('top_k', gen_config)
+            self.assertEqual(gen_config.get('responseMimeType'), 'application/json')
+
+            # 4. Correctly parses response
+            self.assertEqual(result.get('candidate_name'), 'Test Candidate')
+            self.assertEqual(result.get('source'), 'live_gemini')
+
+    def test_interview_features_use_header_auth_and_no_key_in_url(self):
+        """Verify interview question generation, evaluation, and summary use x-goog-api-key headers."""
+        fake_key = "AIzaSySecretApiKeyHeaderTest12345"
+        mock_res_questions = MagicMock()
+        mock_res_questions.status_code = 200
+        mock_res_questions.json.return_value = {
+            "candidates": [{
+                "content": {"parts": [{"text": '{"questions": [{"id": 1, "type": "Technical", "question": "Explain Python GIL", "context": "Python"}]}'}]}
+            }]
+        }
+
+        with patch('analyzer.get_gemini_api_key', return_value=fake_key), \
+             patch('requests.post', return_value=mock_res_questions) as mock_post:
+            analyzer.generate_interview_questions("Python Developer")
+            self.assertTrue(mock_post.called)
+            called_url = mock_post.call_args[0][0]
+            called_headers = mock_post.call_args[1].get('headers', {})
+            called_payload = mock_post.call_args[1].get('json', {})
+
+            self.assertNotIn("?key=", called_url)
+            self.assertNotIn(fake_key, called_url)
+            self.assertEqual(called_headers.get('x-goog-api-key'), fake_key)
+            gen_config = called_payload.get('generationConfig', {})
+            self.assertNotIn('temperature', gen_config)
+            self.assertNotIn('top_p', gen_config)
+            self.assertNotIn('top_k', gen_config)
+
     def test_sanitize_gemini_message(self):
         """Verify sanitize_gemini_message thoroughly redacts API keys and URL params."""
         fake_key = "AIzaSySecretFakeApiKey1234567890123"
@@ -558,6 +648,12 @@ class CareerPilotTestCase(unittest.TestCase):
         sanitized_body = analyzer.sanitize_gemini_message(error_body, api_key=fake_key)
         self.assertNotIn(fake_key, sanitized_body)
         self.assertIn("[REDACTED_API_KEY]", sanitized_body)
+
+        # Test header containing key
+        header_dump = f"headers: {{'x-goog-api-key': '{fake_key}', 'Content-Type': 'application/json'}}"
+        sanitized_header = analyzer.sanitize_gemini_message(header_dump, api_key=fake_key)
+        self.assertNotIn(fake_key, sanitized_header)
+        self.assertIn("[REDACTED_API_KEY]", sanitized_header)
 
     def test_log_gemini_diagnostic(self):
         """Verify log_gemini_diagnostic outputs required diagnostic fields without leaking secrets."""
@@ -607,6 +703,39 @@ class CareerPilotTestCase(unittest.TestCase):
             self.assertNotIn("[Gemini Diagnostic]", str(result))
             self.assertEqual(result.get('source'), 'demo_fallback')
             self.assertIn('Falling back to smart offline analyzer', result.get('notice', ''))
+
+    def test_interview_gemini_failure_fallback(self):
+        """Verify interview question generation, evaluation, and summary fall back safely when Gemini fails."""
+        fake_key = "AIzaSyTestSecretKey1234567890123"
+        with patch('analyzer.get_gemini_api_key', return_value=fake_key), \
+             patch('requests.post', side_effect=Exception(f"Network error with key {fake_key}")), \
+             patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+
+            # 1. Question generation fallback
+            questions = analyzer.generate_interview_questions("Python Developer")
+            self.assertEqual(len(questions), 5)
+            self.assertNotIn(fake_key, str(questions))
+
+            # 2. Answer evaluation fallback
+            evaluation = analyzer.evaluate_interview_answer("Python Developer", "What is GIL?", "The GIL is a mutex in CPython.")
+            self.assertEqual(evaluation.get('source'), 'demo_fallback')
+            self.assertIn('score', evaluation)
+            self.assertNotIn(fake_key, str(evaluation))
+
+            # 3. Session summary fallback
+            sample_history = [
+                {'question': 'Q1', 'evaluation': {'score': 8.0, 'what_could_be_improved': 'None'}},
+                {'question': 'Q2', 'evaluation': {'score': 7.5, 'what_could_be_improved': 'Add metrics'}},
+                {'question': 'Q3', 'evaluation': {'score': 9.0, 'what_could_be_improved': 'Great job'}}
+            ]
+            summary = analyzer.generate_interview_summary("Python Developer", sample_history)
+            self.assertIn('overall_score', summary)
+            self.assertIn('performance_tier', summary)
+            self.assertNotIn(fake_key, str(summary))
+
+            # Ensure stderr diagnostic logged safely without exposing key
+            log_output = mock_stderr.getvalue()
+            self.assertNotIn(fake_key, log_output)
 
 if __name__ == '__main__':
     unittest.main()
