@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import time
 import requests
 
 import sys
@@ -42,14 +43,16 @@ def sanitize_gemini_message(msg, api_key=None):
     msg = re.sub(r'(x-goog-api-key[\'":\s]+)[^\s,\'"}]+', r'\1[REDACTED_API_KEY]', msg, flags=re.IGNORECASE)
     return msg
 
-def log_gemini_diagnostic(exc, operation="resume_analysis"):
+def log_gemini_diagnostic(exc, operation="resume_analysis", attempt=1):
     """
     Safely log server-side diagnostic information when a Gemini request fails.
     Logs ONLY:
+      - operation
+      - model
+      - attempt number
       - exception type
       - HTTP status code if available
       - short sanitized error message from Google's response
-      - Gemini model being used
     Guarantees GEMINI_API_KEY is never logged or exposed.
     """
     exc_type = type(exc).__name__
@@ -84,6 +87,7 @@ def log_gemini_diagnostic(exc, operation="resume_analysis"):
     log_line = (
         f"[Gemini Diagnostic] Operation: {operation} | "
         f"Model: {GEMINI_MODEL} | "
+        f"Attempt: {attempt} | "
         f"Exception: {exc_type} | "
         f"Status: {status_str} | "
         f"Message: {sanitized_msg}"
@@ -91,6 +95,54 @@ def log_gemini_diagnostic(exc, operation="resume_analysis"):
 
     logger.warning(log_line)
     print(log_line, file=sys.stderr, flush=True)
+
+# HTTP status codes that indicate temporary rate limits or transient high-demand
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+NON_RETRYABLE_STATUS_CODES = {400, 401, 403, 404}
+MAX_GEMINI_ATTEMPTS = 3
+GEMINI_BACKOFF_DELAYS = [2, 5]
+
+def post_gemini_request(payload, api_key, operation="gemini_request", max_attempts=MAX_GEMINI_ATTEMPTS, delays=GEMINI_BACKOFF_DELAYS, timeout=20):
+    """
+    Execute Gemini REST POST request with safe retry for temporary errors (429, 500, 502, 503, 504).
+    Permanent client errors (400, 401, 403, 404, etc.) are never retried.
+    Attempts up to max_attempts (default: 3) with exponential backoff delays (default: 2s, 5s).
+    Logs diagnostic on every failure attempt with attempt count and sanitized messages.
+    Never exposes GEMINI_API_KEY.
+    """
+    url = get_gemini_endpoint()
+    headers = get_gemini_headers(api_key)
+
+    last_exception = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            last_exception = e
+            setattr(e, '_gemini_logged', True)
+            status_code = getattr(getattr(e, 'response', None), 'status_code', None)
+
+            # Retry ONLY temporary server/rate-limit errors: 429, 500, 502, 503, 504
+            if status_code in RETRYABLE_STATUS_CODES and attempt < max_attempts:
+                log_gemini_diagnostic(e, operation=operation, attempt=attempt)
+                delay_idx = attempt - 1
+                delay = delays[delay_idx] if delay_idx < len(delays) else delays[-1]
+                time.sleep(delay)
+                continue
+            else:
+                # Permanent error (400, 401, 403, 404, etc.) or max attempts exhausted
+                log_gemini_diagnostic(e, operation=operation, attempt=attempt)
+                raise
+        except Exception as e:
+            last_exception = e
+            setattr(e, '_gemini_logged', True)
+            log_gemini_diagnostic(e, operation=operation, attempt=attempt)
+            raise
+
+    if last_exception:
+        raise last_exception
 
 # ==========================================
 # 1. RESUME ANALYSIS FUNCTIONS (STEP 2)
@@ -330,9 +382,6 @@ def smart_heuristic_analysis(text):
 
 def call_gemini_api(api_key, resume_text):
     """Call Google Gemini REST API with structured JSON output schema."""
-    url = get_gemini_endpoint()
-    headers = get_gemini_headers(api_key)
-    
     prompt = f"""You are an expert technical recruiter and resume coach.
 Analyze the following resume text and provide a comprehensive, strictly structured JSON response.
 
@@ -407,10 +456,7 @@ Return ONLY valid JSON matching this exact structure:
         }
     }
 
-    response = requests.post(url, headers=headers, json=payload, timeout=20)
-    response.raise_for_status()
-    res_data = response.json()
-    
+    res_data = post_gemini_request(payload, api_key, operation="resume_analysis")
     raw_text = res_data['candidates'][0]['content']['parts'][0]['text']
     raw_text = re.sub(r'^```json\s*', '', raw_text.strip())
     raw_text = re.sub(r'\s*```$', '', raw_text.strip())
@@ -432,7 +478,8 @@ def analyze_resume(resume_text):
         try:
             return call_gemini_api(api_key, resume_text)
         except Exception as e:
-            log_gemini_diagnostic(e, operation="resume_analysis")
+            if not getattr(e, '_gemini_logged', False):
+                log_gemini_diagnostic(e, operation="resume_analysis")
             fallback = smart_heuristic_analysis(resume_text)
             fallback['notice'] = 'Gemini API is unreachable or encountered an issue. Falling back to smart offline analyzer.'
             return fallback
@@ -725,8 +772,6 @@ def generate_interview_questions(role, resume_text=""):
     api_key = get_gemini_api_key()
     if api_key:
         try:
-            url = get_gemini_endpoint()
-            headers = get_gemini_headers(api_key)
             prompt = f"""You are a senior technical interviewer hiring for the role of: {role}.
 Generate exactly 5 realistic, high-quality interview questions for this candidate.
 {f"Candidate's Resume Context: {resume_text[:1200]}" if resume_text else ""}
@@ -754,16 +799,16 @@ Return ONLY valid JSON:
                 'contents': [{'parts': [{'text': prompt}]}],
                 'generationConfig': {'responseMimeType': 'application/json'}
             }
-            res = requests.post(url, headers=headers, json=payload, timeout=20)
-            res.raise_for_status()
-            raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
+            res_data = post_gemini_request(payload, api_key, operation="interview_questions")
+            raw_text = res_data['candidates'][0]['content']['parts'][0]['text']
             raw_text = re.sub(r'^```json\s*', '', raw_text.strip())
             raw_text = re.sub(r'\s*```$', '', raw_text.strip())
             data = json.loads(raw_text)
             if 'questions' in data and len(data['questions']) >= 5:
                 return data['questions'][:5]
         except Exception as e:
-            log_gemini_diagnostic(e, operation="interview_questions")
+            if not getattr(e, '_gemini_logged', False):
+                log_gemini_diagnostic(e, operation="interview_questions")
             pass
 
     return generate_fallback_questions(role, resume_text)
@@ -873,8 +918,6 @@ def evaluate_interview_answer(role, question, answer, question_type="Technical")
     api_key = get_gemini_api_key()
     if api_key:
         try:
-            url = get_gemini_endpoint()
-            headers = get_gemini_headers(api_key)
             prompt = f"""You are an expert technical interviewer evaluating a candidate for the role: {role}.
 
 QUESTION ({question_type}):
@@ -898,9 +941,8 @@ Evaluate this response objectively and return ONLY valid JSON matching this exac
                 'contents': [{'parts': [{'text': prompt}]}],
                 'generationConfig': {'responseMimeType': 'application/json'}
             }
-            res = requests.post(url, headers=headers, json=payload, timeout=20)
-            res.raise_for_status()
-            raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
+            res_data = post_gemini_request(payload, api_key, operation="evaluate_interview_answer")
+            raw_text = res_data['candidates'][0]['content']['parts'][0]['text']
             raw_text = re.sub(r'^```json\s*', '', raw_text.strip())
             raw_text = re.sub(r'\s*```$', '', raw_text.strip())
             eval_data = json.loads(raw_text)
@@ -912,7 +954,8 @@ Evaluate this response objectively and return ONLY valid JSON matching this exac
                 eval_data['score'] = 7.0
             return eval_data
         except Exception as e:
-            log_gemini_diagnostic(e, operation="evaluate_interview_answer")
+            if not getattr(e, '_gemini_logged', False):
+                log_gemini_diagnostic(e, operation="evaluate_interview_answer")
             pass
 
     return evaluate_fallback_answer(role, question, answer, question_type)
@@ -953,8 +996,6 @@ def generate_interview_summary(role, history):
     api_key = get_gemini_api_key()
     if api_key and len(history) >= 3:
         try:
-            url = get_gemini_endpoint()
-            headers = get_gemini_headers(api_key)
             history_summary = []
             for idx, h in enumerate(history):
                 history_summary.append(f"Q{idx+1}: {h.get('question')} | Score: {h.get('evaluation', {}).get('score')}/10 | Feedback: {h.get('evaluation', {}).get('what_could_be_improved')}")
@@ -975,9 +1016,8 @@ Provide a concise, strictly structured JSON summary:
                 'contents': [{'parts': [{'text': prompt}]}],
                 'generationConfig': {'responseMimeType': 'application/json'}
             }
-            res = requests.post(url, headers=headers, json=payload, timeout=20)
-            res.raise_for_status()
-            raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
+            res_data = post_gemini_request(payload, api_key, operation="generate_interview_summary")
+            raw_text = res_data['candidates'][0]['content']['parts'][0]['text']
             raw_text = re.sub(r'^```json\s*', '', raw_text.strip())
             raw_text = re.sub(r'\s*```$', '', raw_text.strip())
             data = json.loads(raw_text)
@@ -990,7 +1030,8 @@ Provide a concise, strictly structured JSON summary:
                 'recommended_topics': data.get('recommended_topics', [f'Advanced {role} Architecture', 'System Design Trade-offs'])
             }
         except Exception as e:
-            log_gemini_diagnostic(e, operation="generate_interview_summary")
+            if not getattr(e, '_gemini_logged', False):
+                log_gemini_diagnostic(e, operation="generate_interview_summary")
             pass
 
     # Heuristic summary fallback

@@ -107,7 +107,7 @@ OK (100% Pass Rate)
 
 ---
 
-## 3. Gemini 3.6 Flash & REST Header Authentication Update
+## 3. Gemini 3.6 Flash REST Authentication & Retry Resilience
 
 - **Active Stable Model**: `gemini-3.6-flash` (configurable via `GEMINI_MODEL` environment variable).
 - **Google REST Authentication via HTTP Header**:
@@ -115,27 +115,29 @@ OK (100% Pass Rate)
   - URL never contains `?key=` or raw API keys.
   - Authentication header: `x-goog-api-key: <GEMINI_API_KEY>`
   - Request headers: `'Content-Type': 'application/json'`
-- **Payload Compatibility**:
-  - Deprecated sampling parameters (`temperature`, `top_p`, `top_k`) removed from `generationConfig`.
-  - Structured JSON response enforced via `'generationConfig': {'responseMimeType': 'application/json'}`.
-- **Consistent Implementation**:
-  - Applied across all 4 Gemini features: Resume Analysis, Interview Question Generation, Answer Evaluation, and Session Summary.
-- **Complete Fallback & Diagnostic Security**:
-  - If the Gemini API request fails or is unreachable, the system gracefully logs safe sanitized diagnostics (exception type, HTTP status, sanitized error, model) without leaking secrets, and returns offline heuristic results seamlessly.
+- **Retry Mechanism for Temporary Errors (HTTP 503 / 429)**:
+  - **Retryable Errors**: HTTP 429, HTTP 500, HTTP 502, HTTP 503, HTTP 504.
+  - **Permanent Errors NOT Retried**: HTTP 400, HTTP 401, HTTP 403, HTTP 404.
+  - **Attempts & Backoff**: Maximum 3 attempts total with exponential backoff (Attempt 1 -> 2s sleep -> Attempt 2 -> 5s sleep -> Attempt 3).
+  - **Consistent Across Features**: Integrated into `post_gemini_request` for Resume Analysis, Interview Questions, Answer Evaluation, and Session Summary.
+- **Safe Server-Side Diagnostics & Offline Fallback**:
+  - Logged attributes: `operation`, `model`, `attempt number`, `exception type`, `HTTP status`, and sanitized Google error message.
+  - `GEMINI_API_KEY` is strictly redacted from URLs, headers, and logs.
+  - If all 3 attempts fail, seamless fallback to smart offline analysis occurs automatically.
 
 ---
 
-## 4. Automated Test Suite (35/35 Tests Passing)
+## 4. Automated Test Suite (42/42 Tests Passing)
 
-The test suite now has **35 comprehensive unit tests** in `tests/test_app.py`:
-- `test_gemini_model_configuration`: Verifies `GEMINI_MODEL` defaults to `gemini-3.6-flash`.
-- `test_gemini_endpoint_and_headers_structure`: Verifies `get_gemini_endpoint` and `get_gemini_headers`.
-- `test_call_gemini_api_uses_header_auth_and_no_key_in_url`: Asserts `x-goog-api-key` header is sent, URL has no key, and sampling params are removed.
-- `test_interview_features_use_header_auth_and_no_key_in_url`: Asserts interview features use header auth and clean payloads.
-- `test_sanitize_gemini_message`: Verifies redaction of API keys from URLs, error messages, and headers.
-- `test_log_gemini_diagnostic`: Verifies safe diagnostic logging without leaking secrets.
-- `test_analyze_resume_diagnostic_fallback`: Verifies offline fallback on resume analysis failure.
-- `test_interview_gemini_failure_fallback`: Verifies offline fallback across interview questions, evaluation, and summary.
+The test suite now has **42 comprehensive unit tests** in `tests/test_app.py`:
+- `test_gemini_retry_successful_first_attempt`: Verifies normal single-request execution on HTTP 200 without retries.
+- `test_gemini_retry_on_503_then_success`: Verifies automatic retry on temporary HTTP 503 succeeding on attempt 2.
+- `test_gemini_retry_503_exhausted_fallback`: Verifies 3 attempts on persistent HTTP 503 with backoff sleeps (2s, 5s) and offline fallback.
+- `test_gemini_400_should_not_retry`: Verifies client error HTTP 400 fails immediately on attempt 1 with zero retries.
+- `test_gemini_401_should_not_retry`: Verifies auth error HTTP 401 fails immediately on attempt 1 with zero retries.
+- `test_gemini_403_should_not_retry`: Verifies permission error HTTP 403 fails immediately on attempt 1 with zero retries.
+- `test_gemini_api_key_never_appears_in_logs`: Verifies raw `GEMINI_API_KEY` never appears in logs or error traces.
+- Plus 35 existing tests covering resume analysis, PDF extraction, interview coaching, career intelligence, database persistence, and deployment endpoints.
 
 ---
 

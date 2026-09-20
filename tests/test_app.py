@@ -2,6 +2,7 @@ import os
 import io
 import unittest
 import sqlite3
+import requests
 from pypdf import PdfWriter
 from unittest.mock import patch, MagicMock
 from app import app
@@ -678,6 +679,7 @@ class CareerPilotTestCase(unittest.TestCase):
             # Verify required fields are logged
             self.assertIn("Operation: test_op", log_output)
             self.assertIn(f"Model: {analyzer.GEMINI_MODEL}", log_output)
+            self.assertIn("Attempt: 1", log_output)
             self.assertIn("Exception: Exception", log_output)
             self.assertIn("Status: HTTP 404", log_output)
             self.assertIn("Message: models/gemini-3.6-flash not found", log_output)
@@ -736,6 +738,162 @@ class CareerPilotTestCase(unittest.TestCase):
             # Ensure stderr diagnostic logged safely without exposing key
             log_output = mock_stderr.getvalue()
             self.assertNotIn(fake_key, log_output)
+
+    # ==========================================
+    # 8. GEMINI RETRY & RESILIENCE TESTS (HTTP 503 / 429)
+    # ==========================================
+
+    def test_gemini_retry_successful_first_attempt(self):
+        """Verify post_gemini_request executes normally and does not retry on a successful 200 response."""
+        fake_key = "AIzaSySecretApiKey123"
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.json.return_value = {"candidates": [{"content": {"parts": [{"text": "OK"}]}}]}
+
+        with patch('requests.post', return_value=mock_res) as mock_post, \
+             patch('time.sleep') as mock_sleep:
+            res = analyzer.post_gemini_request({"prompt": "hello"}, fake_key, operation="test_first_attempt")
+            self.assertEqual(mock_post.call_count, 1)
+            self.assertEqual(mock_sleep.call_count, 0)
+            self.assertIn("candidates", res)
+
+    def test_gemini_retry_on_503_then_success(self):
+        """Verify post_gemini_request retries on temporary HTTP 503 error and succeeds on 2nd attempt."""
+        fake_key = "AIzaSySecretApiKey123"
+        mock_503 = MagicMock()
+        mock_503.status_code = 503
+        mock_503.json.return_value = {"error": {"code": 503, "message": "High demand temporary spike"}}
+        mock_503.raise_for_status.side_effect = requests.exceptions.HTTPError("503 Service Unavailable", response=mock_503)
+
+        mock_200 = MagicMock()
+        mock_200.status_code = 200
+        mock_200.json.return_value = {"candidates": [{"content": {"parts": [{"text": "Recovered"}]}}]}
+
+        with patch('requests.post', side_effect=[mock_503, mock_200]) as mock_post, \
+             patch('time.sleep') as mock_sleep, \
+             patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+            res = analyzer.post_gemini_request({"prompt": "hello"}, fake_key, operation="test_503_success")
+            self.assertEqual(mock_post.call_count, 2)
+            self.assertEqual(mock_sleep.call_count, 1)
+            mock_sleep.assert_called_with(2)
+            self.assertIn("candidates", res)
+
+            # Check diagnostic logged attempt 1 and status 503
+            log_output = mock_stderr.getvalue()
+            self.assertIn("Attempt: 1", log_output)
+            self.assertIn("Status: HTTP 503", log_output)
+            self.assertNotIn(fake_key, log_output)
+
+    def test_gemini_retry_503_exhausted_fallback(self):
+        """Verify that 503 on all 3 attempts exhausts retries and falls back cleanly to offline analysis."""
+        fake_key = "AIzaSySecretApiKey123"
+        mock_503 = MagicMock()
+        mock_503.status_code = 503
+        mock_503.json.return_value = {"error": {"code": 503, "message": "High demand persistent spike"}}
+        mock_503.raise_for_status.side_effect = requests.exceptions.HTTPError("503 Service Unavailable", response=mock_503)
+
+        with patch('analyzer.get_gemini_api_key', return_value=fake_key), \
+             patch('requests.post', side_effect=[mock_503, mock_503, mock_503]) as mock_post, \
+             patch('time.sleep') as mock_sleep, \
+             patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+            result = analyzer.analyze_resume("Python developer with SQLite and Flask experience.")
+            
+            # 3 attempts made total
+            self.assertEqual(mock_post.call_count, 3)
+            # 2 backoff sleeps: 2s then 5s
+            self.assertEqual(mock_sleep.call_count, 2)
+            self.assertEqual(mock_sleep.call_args_list[0][0][0], 2)
+            self.assertEqual(mock_sleep.call_args_list[1][0][0], 5)
+
+            # Safe offline fallback returned
+            self.assertEqual(result.get('source'), 'demo_fallback')
+            self.assertIn('Falling back to smart offline analyzer', result.get('notice', ''))
+
+            # Diagnostic logs recorded attempts 1, 2, 3
+            log_output = mock_stderr.getvalue()
+            self.assertIn("Attempt: 1", log_output)
+            self.assertIn("Attempt: 2", log_output)
+            self.assertIn("Attempt: 3", log_output)
+            self.assertNotIn(fake_key, log_output)
+
+    def test_gemini_400_should_not_retry(self):
+        """Verify client error HTTP 400 Bad Request is NOT retried and raises immediately after 1 attempt."""
+        fake_key = "AIzaSySecretApiKey123"
+        mock_400 = MagicMock()
+        mock_400.status_code = 400
+        mock_400.json.return_value = {"error": {"code": 400, "message": "Bad request invalid argument"}}
+        mock_400.raise_for_status.side_effect = requests.exceptions.HTTPError("400 Bad Request", response=mock_400)
+
+        with patch('requests.post', side_effect=[mock_400]) as mock_post, \
+             patch('time.sleep') as mock_sleep, \
+             patch('sys.stderr', new_callable=io.StringIO):
+            with self.assertRaises(requests.exceptions.HTTPError):
+                analyzer.post_gemini_request({"prompt": "hello"}, fake_key, operation="test_400")
+
+            self.assertEqual(mock_post.call_count, 1)
+            self.assertEqual(mock_sleep.call_count, 0)
+
+    def test_gemini_401_should_not_retry(self):
+        """Verify authentication error HTTP 401 Unauthorized is NOT retried and fails after 1 attempt."""
+        fake_key = "AIzaSySecretApiKey123"
+        mock_401 = MagicMock()
+        mock_401.status_code = 401
+        mock_401.json.return_value = {"error": {"code": 401, "message": "API key invalid"}}
+        mock_401.raise_for_status.side_effect = requests.exceptions.HTTPError("401 Unauthorized", response=mock_401)
+
+        with patch('requests.post', side_effect=[mock_401]) as mock_post, \
+             patch('time.sleep') as mock_sleep, \
+             patch('sys.stderr', new_callable=io.StringIO):
+            with self.assertRaises(requests.exceptions.HTTPError):
+                analyzer.post_gemini_request({"prompt": "hello"}, fake_key, operation="test_401")
+
+            self.assertEqual(mock_post.call_count, 1)
+            self.assertEqual(mock_sleep.call_count, 0)
+
+    def test_gemini_403_should_not_retry(self):
+        """Verify permission error HTTP 403 Forbidden is NOT retried and fails after 1 attempt."""
+        fake_key = "AIzaSySecretApiKey123"
+        mock_403 = MagicMock()
+        mock_403.status_code = 403
+        mock_403.json.return_value = {"error": {"code": 403, "message": "Permission denied"}}
+        mock_403.raise_for_status.side_effect = requests.exceptions.HTTPError("403 Forbidden", response=mock_403)
+
+        with patch('requests.post', side_effect=[mock_403]) as mock_post, \
+             patch('time.sleep') as mock_sleep, \
+             patch('sys.stderr', new_callable=io.StringIO):
+            with self.assertRaises(requests.exceptions.HTTPError):
+                analyzer.post_gemini_request({"prompt": "hello"}, fake_key, operation="test_403")
+
+            self.assertEqual(mock_post.call_count, 1)
+            self.assertEqual(mock_sleep.call_count, 0)
+
+    def test_gemini_api_key_never_appears_in_logs(self):
+        """Verify that GEMINI_API_KEY is thoroughly redacted and never appears in stderr diagnostic logs."""
+        unique_secret_key = "AIzaSyTopSecretNeverLogMe9876543210"
+        mock_503 = MagicMock()
+        mock_503.status_code = 503
+        mock_503.json.return_value = {
+            "error": {
+                "code": 503,
+                "message": f"Service unavailable for request with key {unique_secret_key} at endpoint url"
+            }
+        }
+        mock_503.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            f"503 Service Unavailable: x-goog-api-key: {unique_secret_key}",
+            response=mock_503
+        )
+
+        with patch('analyzer.get_gemini_api_key', return_value=unique_secret_key), \
+             patch('requests.post', side_effect=[mock_503, mock_503, mock_503]), \
+             patch('time.sleep'), \
+             patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+            analyzer.analyze_resume("Resume content for secret test")
+
+            log_output = mock_stderr.getvalue()
+            # Ensure the raw key NEVER appears
+            self.assertNotIn(unique_secret_key, log_output)
+            # Ensure it was sanitized
+            self.assertIn("[REDACTED", log_output)
 
 if __name__ == '__main__':
     unittest.main()
