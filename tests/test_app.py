@@ -705,7 +705,7 @@ class CareerPilotTestCase(unittest.TestCase):
             self.assertNotIn(fake_key, str(result))
             self.assertNotIn("[Gemini Diagnostic]", str(result))
             self.assertEqual(result.get('source'), 'demo_fallback')
-            self.assertIn('Falling back to smart offline analyzer', result.get('notice', ''))
+            self.assertIn('AI service is temporarily unavailable. CareerPilot AI is using its built-in analysis engine instead.', result.get('notice', ''))
 
     def test_interview_gemini_failure_fallback(self):
         """Verify interview question generation, evaluation, and summary fall back safely when Gemini fails."""
@@ -808,7 +808,7 @@ class CareerPilotTestCase(unittest.TestCase):
 
             # Safe offline fallback returned
             self.assertEqual(result.get('source'), 'demo_fallback')
-            self.assertIn('Falling back to smart offline analyzer', result.get('notice', ''))
+            self.assertIn('AI service is temporarily unavailable. CareerPilot AI is using its built-in analysis engine instead.', result.get('notice', ''))
 
             # Diagnostic logs recorded attempts 1, 2, 3
             log_output = mock_stderr.getvalue()

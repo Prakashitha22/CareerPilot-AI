@@ -173,7 +173,7 @@ def normalize_analysis(data, source='live_gemini', notice=None):
 def smart_heuristic_analysis(text):
     """
     Heuristic analyzer that parses resume text reliably even without an active API key.
-    Ensures offline demonstrations and hackathon judging run smoothly without crashing.
+    Ensures offline demonstrations and evaluations run smoothly without crashing.
     """
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     
@@ -481,7 +481,7 @@ def analyze_resume(resume_text):
             if not getattr(e, '_gemini_logged', False):
                 log_gemini_diagnostic(e, operation="resume_analysis")
             fallback = smart_heuristic_analysis(resume_text)
-            fallback['notice'] = 'Gemini API is unreachable or encountered an issue. Falling back to smart offline analyzer.'
+            fallback['notice'] = 'AI service is temporarily unavailable. CareerPilot AI is using its built-in analysis engine instead.'
             return fallback
 
     return smart_heuristic_analysis(resume_text)
@@ -815,7 +815,7 @@ Return ONLY valid JSON:
 
 def evaluate_fallback_answer(role, question, answer, question_type="Technical"):
     """
-    Intelligent heuristic answer evaluator for hackathon demo mode.
+    Intelligent heuristic answer evaluator for offline analysis mode.
     Scores answers objectively based on depth, structure, keywords, and relevance.
     """
     text = answer.strip()

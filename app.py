@@ -13,7 +13,7 @@ load_dotenv()
 
 app = Flask(__name__)
 # Secret key for session management and flash messaging
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "careerpilot-ai-college-project-secret")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "careerpilot-ai-platform-secret-key")
 
 # Automatically initialize SQLite database tables on startup
 database.init_db()
@@ -477,7 +477,7 @@ if __name__ == '__main__':
     host = "0.0.0.0" if "PORT" in os.environ else "127.0.0.1"
     debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() in ("true", "1") if "PORT" in os.environ else True
 
-    print(f"CareerPilot AI (Academic Software Project) is running on {host}:{port}!")
+    print(f"CareerPilot AI is running on {host}:{port}!")
     if host == "127.0.0.1":
         print(f"Open your browser and navigate to: http://127.0.0.1:{port}")
     app.run(host=host, port=port, debug=debug_mode)

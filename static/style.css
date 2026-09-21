@@ -157,11 +157,6 @@ button:disabled, .btn-primary:disabled, .btn-analyze:disabled, .btn-evaluate:dis
     border: 1px solid var(--primary-border);
 }
 
-.tag-hackathon {
-    background-color: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fde68a;
-}
 
 /* Container */
 .container {
